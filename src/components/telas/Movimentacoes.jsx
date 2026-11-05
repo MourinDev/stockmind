@@ -1,11 +1,13 @@
+'use client'
+
 /*
   TELA 3: Registro de movimentações (entradas e saídas).
 */
 import { useState } from 'react'
 import { ArrowDown, ArrowRight, ArrowUp, History, Search } from 'lucide-react'
-import { COR_ENTRADA, COR_SAIDA, dataISO } from '../dados'
-import { estaCritico, formatarData } from '../regras'
-import { Abas, Botao, Campo, Cartao, EstadoVazio, IconeCategoria, MensagemErro, TituloTela, classeEntrada } from '../componentes/ui'
+import { COR_ENTRADA, COR_SAIDA, dataISO } from '../../lib/dados'
+import { estaCritico, formatarData } from '../../lib/regras'
+import { Abas, Botao, Campo, Cartao, EstadoVazio, IconeCategoria, MensagemErro, TituloTela, classeEntrada } from '../ui'
 
 const MOTIVOS = {
   ENTRADA: ['Compra do fornecedor', 'Reposição semanal', 'Devolução de cliente', 'Ajuste de inventário'],

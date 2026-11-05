@@ -1,6 +1,8 @@
+'use client'
+
 import { useMemo } from 'react'
 import qrcode from 'qrcode-generator'
-import { formatarMoeda } from '../regras'
+import { formatarMoeda } from '../lib/regras'
 
 // Gera o QR Code em SVG a partir do código do produto (é o que o leitor lê)
 export function QRCodeProduto({ valor, tamanho = 120 }) {

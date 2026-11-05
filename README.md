@@ -7,8 +7,9 @@ Projeto Integrado de Engenharia de Produto (ENSOF8AN1), Uniceplac 2026.
 
 ```bash
 npm install
-npm run dev      # abre em http://localhost:5173
-npm run build    # gera a versão final em dist/
+npm run dev      # abre em http://localhost:3000
+npm run build    # gera a versão de produção
+npm run start    # serve a versão gerada por build
 ```
 
 Logins de demonstração (também há botões de preenchimento rápido na tela de login):
@@ -18,7 +19,7 @@ Logins de demonstração (também há botões de preenchimento rápido na tela d
 | Gestor   | gestor@stockmind.com   | 123456 |
 | Operador | operador@stockmind.com | 123456 |
 
-Stack: React 18 + Vite, Tailwind CSS, Recharts (gráficos), lucide-react (ícones) e qrcode-generator (QR Codes das etiquetas).
+Stack: Next.js 16 (App Router) + React 19, Tailwind CSS, Recharts (gráficos), lucide-react (ícones) e qrcode-generator (QR Codes das etiquetas).
 
 ## Arquitetura e explicação para a banca
 
@@ -26,26 +27,39 @@ Stack: React 18 + Vite, Tailwind CSS, Recharts (gráficos), lucide-react (ícone
 
 ```
 src/
-├── App.jsx                 estado global e camada de dados (as ações que alteram o estoque)
-├── dados.js                constantes, cores, parâmetros da IA e dados iniciais (mock)
-├── regras.js               regras de negócio puras: Curva ABC, IA, validações, CSV
-├── componentes/
-│   ├── ui.jsx              peças visuais reutilizáveis (cartão, botão, campo, modal, selos...)
-│   ├── Layout.jsx          menu lateral, cabeçalho e central de alertas
-│   └── QRCode.jsx          geração do QR Code e da etiqueta de prateleira
-└── telas/
-    ├── Login.jsx           TELA 0: autenticação
-    ├── Dashboard.jsx       TELA 1: indicadores, gráficos e alertas
-    ├── Produtos.jsx        TELA 2: cadastro com validações
-    ├── Movimentacoes.jsx   TELA 3: entradas e saídas
-    ├── OperacaoQR.jsx      TELA 4: leitor de QR Code e etiquetas
-    ├── InteligenciaIA.jsx  TELA 5: sugestão de reposição e projeção de ruptura
-    └── Relatorios.jsx      TELA 6: Curva ABC (Pareto) e histórico com CSV
+├── app/
+│   ├── layout.js           fonte, CSS global, provider e casca (menu + cabeçalho)
+│   ├── page.js             TELA 1: /
+│   ├── login/page.js       TELA 0: /login
+│   ├── produtos/page.js    TELA 2: /produtos
+│   ├── movimentacoes/page.js
+│   ├── qrcode/page.js
+│   ├── ia/page.js
+│   ├── relatorios/page.js
+│   └── globals.css
+├── components/
+│   ├── provedor-estoque.jsx  estado global e camada de dados (as ações que alteram o estoque)
+│   ├── casca-app.jsx         menu, cabeçalho e proteção das rotas sem sessão
+│   ├── ui.jsx                peças visuais reutilizáveis (cartão, botão, campo, modal, selos...)
+│   ├── Layout.jsx            menu lateral, cabeçalho e central de alertas
+│   ├── QRCode.jsx            geração do QR Code e da etiqueta de prateleira
+│   └── telas/
+│       ├── Login.jsx           TELA 0: autenticação
+│       ├── Dashboard.jsx       TELA 1: indicadores, gráficos e alertas
+│       ├── Produtos.jsx        TELA 2: cadastro com validações
+│       ├── Movimentacoes.jsx   TELA 3: entradas e saídas
+│       ├── OperacaoQR.jsx      TELA 4: leitor de QR Code e etiquetas
+│       ├── InteligenciaIA.jsx  TELA 5: sugestão de reposição e projeção de ruptura
+│       └── Relatorios.jsx      TELA 6: Curva ABC (Pareto) e histórico com CSV
+└── lib/
+    ├── dados.js              constantes, cores, parâmetros da IA e dados iniciais (mock)
+    ├── regras.js             regras de negócio puras: Curva ABC, IA, validações, CSV
+    └── rotas.js              ids do menu e caminhos do App Router
 ```
 
 - **`dados.js`**: 10 produtos e 15 movimentações dos últimos 15 dias. Três produtos já começam em estoque crítico.
 - **`regras.js`**: funções puras (`calcularCurvaABC`, `calcularSugestaoIA`, `projetarEstoque`, `validarProduto`, `baixarCSV`). Não mexem em estado, então podem ir para o Node.js quase sem mudança.
-- **`App.jsx`**: é o único lugar que altera dados. As telas só recebem dados e chamam as ações.
+- **`provedor-estoque.jsx`**: é o único lugar que altera dados. As telas só recebem dados e chamam as ações. A sessão fica na memória do layout, então trocar de rota não zera o estoque. Recarregar a página volta ao login.
 
 ### Destaques visuais para mostrar na apresentação
 
@@ -60,13 +74,13 @@ src/
 
 ### Como os estados se conectam
 
-O `App` é o dono de três estados principais, que espelham as tabelas do PostgreSQL:
+O `ProvedorEstoque` é o dono de três estados principais, que espelham as tabelas do PostgreSQL:
 
 - `usuarioLogado`: `{ id, nome, email, cargo, token }`. Enquanto for `null`, só a tela de login aparece (requisito de segurança).
 - `produtos`: `{ id, codigo, descricao, categoria, quantidade, estoqueMinimo, valorUnitario }`
 - `movimentacoes`: `{ id, produtoId, tipo, quantidade, dataOcorrencia, observacao, usuarioResponsavel }`
 
-As telas recebem esses dados por props e nunca alteram o estado direto. Elas chamam as ações do `App`:
+As telas recebem esses dados por props e nunca alteram o estado direto. Elas chamam as ações do `ProvedorEstoque`:
 
 | Ação                    | O que faz                                                        |
 |-------------------------|------------------------------------------------------------------|
@@ -122,7 +136,7 @@ O item que cruza a linha dos 80% ainda entra na classe A, porque a comparação 
 
 ### Como trocar os dados locais pelo back-end (Node.js + PostgreSQL)
 
-Toda a manipulação de dados fica num único bloco do `App.jsx` ("CAMADA DE DADOS"). Cada função vira uma chamada à API:
+Toda a manipulação de dados fica num único bloco de `src/components/provedor-estoque.jsx` ("CAMADA DE DADOS"). Cada função vira uma chamada à API:
 
 | Função hoje                     | Rota no back-end             |
 |---------------------------------|------------------------------|

@@ -1,12 +1,14 @@
+'use client'
+
 /*
   TELA 5: StockMind IA - sugestão inteligente de reposição.
 */
 import { useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { AlertTriangle, BrainCircuit, CalendarClock, CheckCircle2, Clock, PackageCheck, ShoppingCart } from 'lucide-react'
-import { COR_ENTRADA, JANELA_ANALISE_DIAS, PRAZO_ENTREGA_DIAS, dataISO } from '../dados'
-import { calcularSugestaoIA, formatarMoeda, projetarEstoque } from '../regras'
-import { Abas, Botao, Cartao, IconeCategoria, Modal, Selo, TituloTela, TooltipGrafico, animarGraficos } from '../componentes/ui'
+import { COR_ENTRADA, JANELA_ANALISE_DIAS, PRAZO_ENTREGA_DIAS, dataISO } from '../../lib/dados'
+import { calcularSugestaoIA, formatarMoeda, projetarEstoque } from '../../lib/regras'
+import { Abas, Botao, Cartao, IconeCategoria, Modal, Selo, TituloTela, TooltipGrafico, animarGraficos } from '../ui'
 
 const ORDEM_URGENCIA = { 'Reposição Imediata': 0, 'Planejar Compra': 1, 'Estoque Saudável': 2 }
 const ESTILO_URGENCIA = {

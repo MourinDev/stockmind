@@ -1,10 +1,12 @@
+'use client'
+
 /*
   TELA 0: Login. Sem usuário autenticado, nenhuma outra tela é exibida.
 */
 import { useState } from 'react'
 import { BellRing, BrainCircuit, Eye, EyeOff, Lock, Mail, QrCode, ShieldCheck } from 'lucide-react'
-import { USUARIOS_DEMO } from '../dados'
-import { Botao, Campo, MensagemErro, classeEntrada } from '../componentes/ui'
+import { USUARIOS_DEMO } from '../../lib/dados'
+import { Botao, Campo, MensagemErro, classeEntrada } from '../ui'
 
 const DESTAQUES = [
   { icone: BellRing, titulo: 'Alertas de ruptura', texto: 'Aviso automático quando um item chega no estoque mínimo.' },

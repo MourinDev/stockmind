@@ -1,8 +1,10 @@
+'use client'
+
 /*
   Componentes visuais reutilizados em todas as telas.
 */
 import { AlertTriangle, BrainCircuit, CheckCircle2, CupSoda, Milk, ShoppingBasket, ShowerHead, SprayCan, X, XCircle } from 'lucide-react'
-import { COR_CATEGORIA, COR_CLASSE } from '../dados'
+import { COR_CATEGORIA, COR_CLASSE } from '../lib/dados'
 
 export function LogoStockMind({ escuro = false, compacto = false }) {
   return (
@@ -252,7 +254,9 @@ export function Abas({ opcoes, valor, onMudar }) {
 }
 
 // Quem pediu ao sistema operacional para reduzir animações vê os gráficos já prontos
-export const animarGraficos = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+// No servidor não existe window; a animação ligada é o padrão de quem não pediu redução de movimento.
+export const animarGraficos =
+  typeof window === 'undefined' || !window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // Caixinha do tooltip dos gráficos (recharts)
 export function TooltipGrafico({ active, payload, label, formatarRotulo, formatarValor = (v) => v }) {

@@ -1,25 +1,29 @@
-/*
-  Componente principal: guarda o estado do sistema e as ações que o alteram.
-  As telas só recebem dados por props e chamam estas ações.
-*/
-import { useEffect, useState } from 'react'
-import { MOVIMENTACOES_INICIAIS, PRODUTOS_INICIAIS, USUARIOS_DEMO } from './dados'
-import { estaCritico, nivelEstoque, validarProduto } from './regras'
-import { BarraLateral, Cabecalho } from './componentes/Layout'
-import { Aviso } from './componentes/ui'
-import TelaLogin from './telas/Login'
-import TelaDashboard from './telas/Dashboard'
-import TelaProdutos from './telas/Produtos'
-import TelaMovimentacoes from './telas/Movimentacoes'
-import TelaQRCode from './telas/OperacaoQR'
-import TelaIA from './telas/InteligenciaIA'
-import TelaRelatorios from './telas/Relatorios'
+'use client'
 
-export default function App() {
+/*
+  Guarda o estado do sistema e as ações que o alteram.
+  As telas só recebem dados por props e chamam estas ações.
+  O provider fica no layout, então o estoque continua na memória ao trocar de rota.
+*/
+import { createContext, useContext, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { MOVIMENTACOES_INICIAIS, PRODUTOS_INICIAIS, USUARIOS_DEMO } from '../lib/dados'
+import { estaCritico, nivelEstoque, validarProduto } from '../lib/regras'
+import { ROTA_LOGIN, ROTAS } from '../lib/rotas'
+
+const EstoqueContext = createContext(null)
+
+export function useEstoque() {
+  const contexto = useContext(EstoqueContext)
+  if (!contexto) throw new Error('useEstoque precisa estar dentro do ProvedorEstoque.')
+  return contexto
+}
+
+export function ProvedorEstoque({ children }) {
+  const router = useRouter()
   const [usuarioLogado, setUsuarioLogado] = useState(null)
   const [produtos, setProdutos] = useState(PRODUTOS_INICIAIS)
   const [movimentacoes, setMovimentacoes] = useState(MOVIMENTACOES_INICIAIS)
-  const [telaAtual, setTelaAtual] = useState('dashboard')
   const [menuAberto, setMenuAberto] = useState(false)
   const [aviso, setAviso] = useState(null)
 
@@ -50,13 +54,15 @@ export default function App() {
 
     const { senha: _senha, ...dadosPublicos } = encontrado
     setUsuarioLogado({ ...dadosPublicos, token: `demo-${Date.now()}` })
-    setTelaAtual('dashboard')
+    setMenuAberto(false)
+    router.push(ROTAS.dashboard)
     return { ok: true }
   }
 
   function sair() {
     setUsuarioLogado(null)
     setMenuAberto(false)
+    router.push(ROTA_LOGIN)
   }
 
   function salvarProduto(dados) {
@@ -144,50 +150,36 @@ export default function App() {
     return resultado
   }
 
-  if (!usuarioLogado) return <TelaLogin onEntrar={fazerLogin} />
-
-  const produtosCriticos = produtos.filter(estaCritico).sort((a, b) => nivelEstoque(a) - nivelEstoque(b))
-  const irPara = (tela) => {
-    setTelaAtual(tela)
+  function irPara(id) {
     setMenuAberto(false)
+    router.push(ROTAS[id] ?? ROTAS.dashboard)
     window.scrollTo({ top: 0 })
   }
-  const propsComuns = { produtos, movimentacoes, usuario: usuarioLogado, registrarMovimentacao, irPara }
+
+  const produtosCriticos = produtos.filter(estaCritico).sort((a, b) => nivelEstoque(a) - nivelEstoque(b))
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      <BarraLateral
-        telaAtual={telaAtual}
-        totalAlertas={produtosCriticos.length}
-        usuario={usuarioLogado}
-        aberto={menuAberto}
-        onFechar={() => setMenuAberto(false)}
-        onNavegar={irPara}
-        onSair={sair}
-      />
-
-      <div className="lg:pl-72">
-        <Cabecalho
-          telaAtual={telaAtual}
-          usuario={usuarioLogado}
-          produtosCriticos={produtosCriticos}
-          onAbrirMenu={() => setMenuAberto(true)}
-          onNavegar={irPara}
-          onSair={sair}
-        />
-
-        {/* a chave faz a animação de entrada rodar a cada troca de tela */}
-        <main key={telaAtual} className="animar-entrada mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-          {telaAtual === 'dashboard' && <TelaDashboard {...propsComuns} produtosCriticos={produtosCriticos} />}
-          {telaAtual === 'produtos' && <TelaProdutos produtos={produtos} onSalvar={salvarProduto} onExcluir={excluirProduto} />}
-          {telaAtual === 'movimentacoes' && <TelaMovimentacoes {...propsComuns} />}
-          {telaAtual === 'qrcode' && <TelaQRCode {...propsComuns} />}
-          {telaAtual === 'ia' && <TelaIA {...propsComuns} registrarMovimentacoes={registrarMovimentacoes} mostrarAviso={mostrarAviso} />}
-          {telaAtual === 'relatorios' && <TelaRelatorios produtos={produtos} movimentacoes={movimentacoes} />}
-        </main>
-      </div>
-
-      {aviso && <Aviso key={aviso.chave} aviso={aviso} onFechar={() => setAviso(null)} />}
-    </div>
+    <EstoqueContext.Provider
+      value={{
+        usuario: usuarioLogado,
+        produtos,
+        movimentacoes,
+        produtosCriticos,
+        menuAberto,
+        setMenuAberto,
+        aviso,
+        setAviso,
+        fazerLogin,
+        sair,
+        salvarProduto,
+        excluirProduto,
+        registrarMovimentacao,
+        registrarMovimentacoes,
+        mostrarAviso,
+        irPara,
+      }}
+    >
+      {children}
+    </EstoqueContext.Provider>
   )
 }

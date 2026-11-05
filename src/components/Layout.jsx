@@ -1,8 +1,13 @@
+'use client'
+
 /*
   Estrutura fixa do sistema: menu lateral (gaveta no celular) e cabeçalho.
 */
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { AlertTriangle, ArrowLeftRight, Bell, FileBarChart, LayoutDashboard, LogOut, Menu, Package, QrCode, Sparkles, X } from 'lucide-react'
+import { idDaRota, ROTAS } from '../lib/rotas'
 import { LogoStockMind, IconeCategoria } from './ui'
 
 export const GRUPOS_MENU = [
@@ -29,7 +34,9 @@ export const GRUPOS_MENU = [
 
 export const TITULO_TELA = Object.fromEntries(GRUPOS_MENU.flatMap((g) => g.itens).map((i) => [i.id, i.rotulo]))
 
-export function BarraLateral({ telaAtual, totalAlertas, usuario, aberto, onFechar, onNavegar, onSair }) {
+export function BarraLateral({ totalAlertas, usuario, aberto, onFechar, onSair }) {
+  const pathname = usePathname()
+
   return (
     <>
       {aberto && <div className="animar-fundo fixed inset-0 z-30 bg-slate-950/60 backdrop-blur-sm lg:hidden" onClick={onFechar} />}
@@ -58,11 +65,12 @@ export function BarraLateral({ telaAtual, totalAlertas, usuario, aberto, onFecha
               <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-slate-500">{grupo.titulo}</p>
               <div className="space-y-1">
                 {grupo.itens.map(({ id, rotulo, icone: Icone, destaque }) => {
-                  const ativo = telaAtual === id
+                  const ativo = pathname === ROTAS[id]
                   return (
-                    <button
+                    <Link
                       key={id}
-                      onClick={() => onNavegar(id)}
+                      href={ROTAS[id]}
+                      onClick={onFechar}
                       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
                         ativo ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
                       }`}
@@ -76,7 +84,7 @@ export function BarraLateral({ telaAtual, totalAlertas, usuario, aberto, onFecha
                       {destaque && (
                         <span className="rounded-full bg-gradient-to-r from-blue-500 to-teal-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">IA</span>
                       )}
-                    </button>
+                    </Link>
                   )
                 })}
               </div>
@@ -112,7 +120,9 @@ export function Avatar({ nome, tamanho = 'h-9 w-9 text-sm' }) {
   )
 }
 
-export function Cabecalho({ telaAtual, usuario, produtosCriticos, onAbrirMenu, onNavegar, onSair }) {
+export function Cabecalho({ usuario, produtosCriticos, onAbrirMenu, onSair }) {
+  const pathname = usePathname()
+  const telaAtual = idDaRota(pathname)
   const [notificacoesAbertas, setNotificacoesAbertas] = useState(false)
   const caixaRef = useRef(null)
 
@@ -174,15 +184,13 @@ export function Cabecalho({ telaAtual, usuario, produtosCriticos, onAbrirMenu, o
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={() => {
-                  setNotificacoesAbertas(false)
-                  onNavegar('ia')
-                }}
-                className="w-full bg-slate-50 px-4 py-3 text-sm font-semibold text-royal-claro hover:bg-slate-100"
+              <Link
+                href={ROTAS.ia}
+                onClick={() => setNotificacoesAbertas(false)}
+                className="block w-full bg-slate-50 px-4 py-3 text-center text-sm font-semibold text-royal-claro hover:bg-slate-100"
               >
                 Ver sugestão de reposição da IA
-              </button>
+              </Link>
             </div>
           )}
         </div>

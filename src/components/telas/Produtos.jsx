@@ -1,12 +1,14 @@
+'use client'
+
 /*
   TELA 2: Cadastro e gestão de produtos (CRUD + validações).
 */
 import { useState } from 'react'
 import { ArrowDownUp, PackageSearch, Pencil, Plus, Printer, QrCode, Search, Trash2 } from 'lucide-react'
-import { CATEGORIAS } from '../dados'
-import { estaCritico, formatarMoeda, nivelEstoque } from '../regras'
-import { Abas, BarraNivel, Botao, Campo, Cartao, EstadoVazio, IconeCategoria, MensagemErro, Modal, SeloStatus, TituloTela, classeEntrada } from '../componentes/ui'
-import { Etiqueta } from '../componentes/QRCode'
+import { CATEGORIAS } from '../../lib/dados'
+import { estaCritico, formatarMoeda, nivelEstoque } from '../../lib/regras'
+import { Abas, BarraNivel, Botao, Campo, Cartao, EstadoVazio, IconeCategoria, MensagemErro, Modal, SeloStatus, TituloTela, classeEntrada } from '../ui'
+import { Etiqueta } from '../QRCode'
 
 const PRODUTO_VAZIO = { codigo: '', descricao: '', categoria: '', quantidade: '', estoqueMinimo: '', valorUnitario: '' }
 

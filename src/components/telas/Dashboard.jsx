@@ -1,12 +1,14 @@
+'use client'
+
 /*
   TELA 1: Dashboard gerencial (Business Intelligence).
 */
 import { useMemo } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Boxes, BrainCircuit, CheckCircle2, Plus, Wallet } from 'lucide-react'
-import { CATEGORIAS, COR_CATEGORIA, COR_ENTRADA, COR_SAIDA, JANELA_ANALISE_DIAS, diasAtras } from '../dados'
-import { calcularSugestaoIA, formatarData, formatarMoeda, saudacao } from '../regras'
-import { BarraNivel, Botao, Cartao, EstadoVazio, IconeCategoria, TooltipGrafico, animarGraficos } from '../componentes/ui'
+import { CATEGORIAS, COR_CATEGORIA, COR_ENTRADA, COR_SAIDA, JANELA_ANALISE_DIAS, diasAtras } from '../../lib/dados'
+import { calcularSugestaoIA, formatarData, formatarMoeda, saudacao } from '../../lib/regras'
+import { BarraNivel, Botao, Cartao, EstadoVazio, IconeCategoria, TooltipGrafico, animarGraficos } from '../ui'
 
 function CartaoKPI({ titulo, valor, detalhe, icone: Icone, cor, variacao }) {
   return (

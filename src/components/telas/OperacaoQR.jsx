@@ -1,3 +1,5 @@
+'use client'
+
 /*
   TELA 4: Operação rápida com QR Code.
   O leitor é simulado: tocar numa etiqueta ou digitar o código faz o mesmo
@@ -5,10 +7,10 @@
 */
 import { useState } from 'react'
 import { ArrowDown, ArrowUp, Printer, QrCode, ScanLine } from 'lucide-react'
-import { COR_ENTRADA, COR_SAIDA, dataISO } from '../dados'
-import { estaCritico, formatarMoeda, tocarBip } from '../regras'
-import { Abas, BarraNivel, Botao, Cartao, EstadoVazio, IconeCategoria, MensagemErro, SeloStatus, TituloTela, classeEntrada } from '../componentes/ui'
-import { Etiqueta, QRCodeProduto } from '../componentes/QRCode'
+import { COR_ENTRADA, COR_SAIDA, dataISO } from '../../lib/dados'
+import { estaCritico, formatarMoeda, tocarBip } from '../../lib/regras'
+import { Abas, BarraNivel, Botao, Cartao, EstadoVazio, IconeCategoria, MensagemErro, SeloStatus, TituloTela, classeEntrada } from '../ui'
+import { Etiqueta, QRCodeProduto } from '../QRCode'
 
 function CantoMira({ posicao }) {
   const estilos = {

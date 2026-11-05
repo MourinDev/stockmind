@@ -1,12 +1,14 @@
+'use client'
+
 /*
   TELA 6: Relatórios gerenciais e Curva ABC.
 */
 import { useMemo, useState } from 'react'
 import { Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Download, History } from 'lucide-react'
-import { COR_CLASSE, COR_ENTRADA, COR_SAIDA, dataISO } from '../dados'
-import { baixarCSV, calcularCurvaABC, formatarData, formatarMoeda } from '../regras'
-import { Abas, Botao, Cartao, EstadoVazio, SeloClasse, TituloTela, TooltipGrafico, animarGraficos, classeEntrada } from '../componentes/ui'
+import { COR_CLASSE, COR_ENTRADA, COR_SAIDA, dataISO } from '../../lib/dados'
+import { baixarCSV, calcularCurvaABC, formatarData, formatarMoeda } from '../../lib/regras'
+import { Abas, Botao, Cartao, EstadoVazio, SeloClasse, TituloTela, TooltipGrafico, animarGraficos, classeEntrada } from '../ui'
 
 const DESCRICAO_CLASSE = {
   A: 'Poucos itens, maior parte do valor. Controle rigoroso e contagem frequente.',
