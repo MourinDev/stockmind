@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PerfilUsuario {
+  admin
+  operador
+
+  @@map("perfil_usuario")
+}
+
+enum TipoMovimentacao {
+  entrada
+  saida
+
+  @@map("tipo_movimentacao")
+}
+
+enum StatusSugestao {
+  pendente
+  aceita
+  ignorada
+
+  @@map("status_sugestao")
+}
+
+model Usuario {
+  id            Int           @id @default(autoincrement())
+  nome          String        @db.VarChar(120)
+  email         String        @unique @db.VarChar(160)
+  senhaHash     String        @map("senha_hash") @db.VarChar(72)
+  perfil        PerfilUsuario
+  ativo         Boolean       @default(true)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  movimentacoes Movimentacao[]
+
+  @@map("usuarios")
+}
+
+model Categoria {
+  id        Int      @id @default(autoincrement())
+  nome      String   @unique @db.VarChar(40)
+  cor       String   @db.VarChar(7)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  produtos  Produto[]
+
+  @@map("categorias")
+}
+
+model Produto {
+  id              Int      @id @default(autoincrement())
+  codigo          String   @unique @db.VarChar(20)
+  descricao       String   @db.VarChar(160)
+  categoriaId     Int      @map("categoria_id")
+  quantidadeAtual Int      @default(0) @map("quantidade_atual")
+  estoqueMinimo   Int      @map("estoque_minimo")
+  valorCusto      Decimal  @map("valor_custo") @db.Decimal(10, 2)
+  valorVenda      Decimal  @map("valor_venda") @db.Decimal(10, 2)
+  qrCode          String   @unique @map("qr_code") @db.VarChar(64)
+  ativo           Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  categoria     Categoria           @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  movimentacoes Movimentacao[]
+  sugestoes     SugestaoReposicao[]
+
+  @@index([categoriaId])
+  @@map("produtos")
+}
+
+model Movimentacao {
+  id            Int              @id @default(autoincrement())
+  produtoId     Int              @map("produto_id")
+  usuarioId     Int              @map("usuario_id")
+  tipo          TipoMovimentacao
+  quantidade    Int
+  valorUnitario Decimal          @map("valor_unitario") @db.Decimal(10, 2)
+  observacao    String?          @db.VarChar(240)
+  dataHora      DateTime         @map("data_hora") @db.Timestamptz(6)
+
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Restrict)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  @@index([produtoId, dataHora])
+  @@index([dataHora])
+  @@index([tipo])
+  @@map("movimentacoes")
+}
+
+model SugestaoReposicao {
+  id                     Int            @id @default(autoincrement())
+  produtoId              Int            @map("produto_id")
+  consumoMedioDiario     Decimal        @map("consumo_medio_diario") @db.Decimal(10, 4)
+  pontoReposicaoSugerido Int            @map("ponto_reposicao_sugerido")
+  quantidadeSugerida     Int            @map("quantidade_sugerida")
+  dataGeracao            DateTime       @default(now()) @map("data_geracao") @db.Timestamptz(6)
+  status                 StatusSugestao @default(pendente)
+  metodo                 String         @db.VarChar(40)
+  createdAt              DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  produto Produto @relation(fields: [produtoId], references: [id], onDelete: Restrict)
+
+  @@index([produtoId, dataGeracao])
+  @@index([status])
+  @@map("sugestoes_reposicao")
+}
