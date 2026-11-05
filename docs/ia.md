@@ -2,7 +2,7 @@
 
 A StockMind calcula a sugestão no servidor, com JavaScript e SQL. É uma análise estatística preditiva: média ponderada do consumo, estoque de segurança e sazonalidade do dia da semana. Não é aprendizado de máquina. Não há modelo treinado, nem serviço externo.
 
-O código está em `src/lib/ia/reposicao.js`. Os parâmetros ficam no objeto `PARAMETROS_IA`. O prazo de entrega é 3 dias, o mesmo valor de `PRAZO_ENTREGA_DIAS` em `src/lib/dados.js`. O módulo de cálculo não importa esse arquivo.
+O código está em `src/lib/ia/reposicao.ts`. Os parâmetros ficam no objeto `PARAMETROS_IA`. O prazo de entrega é 3 dias, o mesmo valor de `PRAZO_ENTREGA_DIAS` em `src/lib/dados.ts`. O módulo de cálculo não importa esse arquivo. Os testes rodam com `npm test`. O Node 24 não resolve o import `./reposicao.js` para o arquivo `.ts`, então o script usa o `tsx` que já está no projeto: `node --import tsx --test src/lib/ia/reposicao.test.ts`. A checagem de tipos do projeto é `npm run typecheck`.
 
 ## De onde vêm os dados
 

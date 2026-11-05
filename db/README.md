@@ -68,7 +68,7 @@ Um `migrate dev` futuro pode sugerir `DROP VIEW` ou `DROP FUNCTION`, porque o `s
 
 ## Views
 
-Consultas prontas em `src/lib/queries.js`, uma função por view, via `prisma.$queryRaw`. `Decimal` volta como número.
+Consultas prontas em `src/lib/queries.ts`, uma função por view, via `prisma.$queryRaw`. `Decimal` volta como número. A checagem de tipos é `npm run typecheck`.
 
 - `vw_produtos_estoque_baixo`: produtos ativos com `quantidade_atual <= estoque_minimo`. É o alerta.
 - `vw_valor_total_estoque`: uma linha com a soma a preço de custo, a soma a preço de venda e a quantidade de produtos ativos.
