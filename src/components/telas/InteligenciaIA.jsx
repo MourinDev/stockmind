@@ -52,18 +52,19 @@ export default function TelaIA({ produtos, movimentacoes, registrarMovimentacao,
   const itensDaOrdem = analise.filter((item) => item.urgencia !== 'Estoque Saudável' && item.sugestaoCompra > 0)
   const custoOrdem = itensDaOrdem.reduce((s, item) => s + item.sugestaoCompra * item.produto.valorUnitario, 0)
 
-  function aplicarSugestao(item) {
-    registrarMovimentacao({
+  async function aplicarSugestao(item) {
+    const resultado = await registrarMovimentacao({
       produtoId: item.produto.id,
       tipo: 'ENTRADA',
       quantidade: item.sugestaoCompra,
       dataOcorrencia: dataISO(new Date()),
       observacao: 'Reposição sugerida pela StockMind IA',
     })
+    if (!resultado.ok) mostrarAviso(resultado.erro, 'erro')
   }
 
-  function receberOrdemCompleta() {
-    const resultado = registrarMovimentacoes(
+  async function receberOrdemCompleta() {
+    const resultado = await registrarMovimentacoes(
       itensDaOrdem.map((item) => ({
         produtoId: item.produto.id,
         tipo: 'ENTRADA',
@@ -278,7 +279,7 @@ export default function TelaIA({ produtos, movimentacoes, registrarMovimentacao,
             <span className="text-sm text-slate-300">Custo estimado</span>
             <span className="text-xl font-extrabold">{formatarMoeda(custoOrdem)}</span>
           </div>
-          <p className="mt-3 text-xs text-slate-500">Ao confirmar o recebimento, cada item vira uma ENTRADA no estoque, de uma vez só.</p>
+          <p className="mt-3 text-xs text-slate-500">Ao confirmar o recebimento, cada item vira uma ENTRADA no estoque.</p>
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Botao variante="secundario" onClick={() => setOrdemAberta(false)}>Fechar</Botao>
             <Botao variante="sucesso" onClick={receberOrdemCompleta}>

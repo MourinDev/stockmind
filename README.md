@@ -12,14 +12,16 @@ npm run build    # gera a versão de produção
 npm run start    # serve a versão gerada por build
 ```
 
-Logins de demonstração (também há botões de preenchimento rápido na tela de login):
+Logins de demonstração (a senha está só no banco, com hash bcrypt):
 
 | Perfil   | E-mail                 | Senha  |
 |----------|------------------------|--------|
 | Gestor   | gestor@stockmind.com   | 123456 |
 | Operador | operador@stockmind.com | 123456 |
 
-Stack: Next.js 16 (App Router) + React 19, Tailwind CSS, Recharts (gráficos), lucide-react (ícones) e qrcode-generator (QR Codes das etiquetas).
+Antes de `npm run dev`, copie `.env.example` para `.env` e preencha `DATABASE_URL`, `DIRECT_URL` e `SESSION_SECRET`. O segredo da sessão não pode ir para o cliente: gere com `openssl rand -base64 32` e não use o prefixo `NEXT_PUBLIC_`.
+
+Stack: Next.js 16 (App Router) + React 19, Prisma 7, PostgreSQL (Neon), Tailwind CSS, Recharts, lucide-react, qrcode-generator, `jose` (sessão) e `zod` (validação). Sem NextAuth.
 
 ## Arquitetura e explicação para a banca
 
@@ -52,14 +54,14 @@ src/
 │       ├── InteligenciaIA.jsx  TELA 5: sugestão de reposição e projeção de ruptura
 │       └── Relatorios.jsx      TELA 6: Curva ABC (Pareto) e histórico com CSV
 └── lib/
-    ├── dados.js              constantes, cores, parâmetros da IA e dados iniciais (mock)
+    ├── dados.js              cores, categorias da tela e parâmetros da IA
     ├── regras.js             regras de negócio puras: Curva ABC, IA, validações, CSV
     └── rotas.js              ids do menu e caminhos do App Router
 ```
 
-- **`dados.js`**: 10 produtos e 15 movimentações dos últimos 15 dias. Três produtos já começam em estoque crítico.
-- **`regras.js`**: funções puras (`calcularCurvaABC`, `calcularSugestaoIA`, `projetarEstoque`, `validarProduto`, `baixarCSV`). Não mexem em estado, então podem ir para o Node.js quase sem mudança.
-- **`provedor-estoque.jsx`**: é o único lugar que altera dados. As telas só recebem dados e chamam as ações. A sessão fica na memória do layout, então trocar de rota não zera o estoque. Recarregar a página volta ao login.
+- **`dados.js`**: cores dos gráficos, lista de categorias do formulário e parâmetros da IA. Os produtos e o histórico vêm do banco (veja `docs/api.md`).
+- **`regras.js`**: funções puras (`calcularCurvaABC`, `calcularSugestaoIA`, `projetarEstoque`, `validarProduto`, `baixarCSV`). O dashboard, os relatórios e a IA ainda calculam no cliente com essas funções.
+- **`provedor-estoque.jsx`**: busca e grava pela API e devolve o mesmo formato de antes para as telas. A sessão é o cookie `stockmind_sessao`. Recarregar a página mantém o login.
 
 ### Destaques visuais para mostrar na apresentação
 
@@ -76,7 +78,7 @@ src/
 
 O `ProvedorEstoque` é o dono de três estados principais, que espelham as tabelas do PostgreSQL:
 
-- `usuarioLogado`: `{ id, nome, email, cargo, token }`. Enquanto for `null`, só a tela de login aparece (requisito de segurança).
+- `usuario`: `{ id, nome, email, perfil, cargo }`. `cargo` é "Gestor" ou "Operador", só para o texto do cabeçalho. O perfil que autoriza a API é o do banco, não o que o navegador envia.
 - `produtos`: `{ id, codigo, descricao, categoria, quantidade, estoqueMinimo, valorUnitario }`
 - `movimentacoes`: `{ id, produtoId, tipo, quantidade, dataOcorrencia, observacao, usuarioResponsavel }`
 
@@ -86,12 +88,12 @@ As telas recebem esses dados por props e nunca alteram o estado direto. Elas cha
 |-------------------------|------------------------------------------------------------------|
 | `fazerLogin` / `sair`   | Autentica e encerra a sessão                                     |
 | `salvarProduto`         | Valida e cadastra ou edita um produto                            |
-| `excluirProduto`        | Exclui, desde que o produto não tenha movimentações              |
+| `excluirProduto`        | Desativa o produto (`ativo = false`). A linha e o histórico ficam |
 | `registrarMovimentacao` | Grava a movimentação e atualiza o saldo do produto               |
 
 Como tudo parte do mesmo estado, um registro feito pelo leitor de QR Code ou pela IA aparece na hora no Dashboard, nos alertas, na Curva ABC e no histórico.
 
-**Regra crítica do estoque:** `ENTRADA` soma ao saldo. `SAIDA` subtrai, e a operação é bloqueada com mensagem de erro se a quantidade pedida for maior que o saldo disponível. O saldo nunca fica negativo.
+**Regra crítica do estoque:** a API só insere a movimentação. Um trigger do PostgreSQL soma a entrada, subtrai a saída e recusa saldo negativo. A aplicação não recalcula o saldo em JavaScript. O operador consulta produtos, mas não cadastra, edita nem exclui.
 
 **Validações do cadastro:** campos obrigatórios, código duplicado (sem diferenciar maiúsculas), quantidade e estoque mínimo negativos ou fracionados, e valor unitário menor ou igual a zero. Cada erro aparece em vermelho embaixo do campo.
 
@@ -134,56 +136,8 @@ ordenar os itens do maior para o menor valor total
 
 O item que cruza a linha dos 80% ainda entra na classe A, porque a comparação usa o acumulado de antes dele.
 
-### Como trocar os dados locais pelo back-end (Node.js + PostgreSQL)
+### API
 
-Toda a manipulação de dados fica num único bloco de `src/components/provedor-estoque.jsx` ("CAMADA DE DADOS"). Cada função vira uma chamada à API:
+As rotas, os perfis e os códigos de resposta estão em [docs/api.md](docs/api.md). O banco (schema, trigger e views) está em [db/README.md](db/README.md).
 
-| Função hoje                     | Rota no back-end             |
-|---------------------------------|------------------------------|
-| dados iniciais de produtos      | `GET /api/produtos`          |
-| dados iniciais de movimentações | `GET /api/movimentacoes`     |
-| `fazerLogin`                    | `POST /api/auth/login`       |
-| `salvarProduto` (novo)          | `POST /api/produtos`         |
-| `salvarProduto` (edição)        | `PUT /api/produtos/:id`      |
-| `excluirProduto`                | `DELETE /api/produtos/:id`   |
-| `registrarMovimentacoes`        | `POST /api/movimentacoes`    |
-
-Exemplo de como fica `registrarMovimentacao`:
-
-```js
-async function registrarMovimentacao(dados) {
-  const resposta = await fetch('/api/movimentacoes', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${usuarioLogado.token}`,
-    },
-    body: JSON.stringify(dados),
-  })
-  const corpo = await resposta.json()
-  if (!resposta.ok) return { ok: false, erro: corpo.erro }
-
-  // o back-end devolve a movimentação criada e o produto com saldo novo
-  setMovimentacoes((lista) => [...lista, corpo.movimentacao])
-  setProdutos((lista) => lista.map((p) => (p.id === corpo.produto.id ? corpo.produto : p)))
-  return { ok: true }
-}
-```
-
-E a carga inicial:
-
-```js
-useEffect(() => {
-  if (!usuarioLogado) return
-  const cabecalho = { headers: { Authorization: `Bearer ${usuarioLogado.token}` } }
-  fetch('/api/produtos', cabecalho).then((r) => r.json()).then(setProdutos)
-  fetch('/api/movimentacoes', cabecalho).then((r) => r.json()).then(setMovimentacoes)
-}, [usuarioLogado])
-```
-
-Como as funções já devolvem `{ ok, erro }`, as telas não mudam. Também vale lembrar:
-
-- O back-end repete todas as validações (código duplicado, saldo insuficiente etc.). Validar só no front não é seguro.
-- A movimentação e a atualização do saldo devem rodar numa **transação** do PostgreSQL, para nunca gravar uma sem a outra.
-- `calcularCurvaABC` e `calcularSugestaoIA` podem virar rotas (`GET /api/relatorios/curva-abc`, `GET /api/ia/sugestoes`) quando o volume de dados crescer.
-- A senha fica só no banco, com hash (bcrypt), e o login devolve um token JWT.
+O cookie da sessão é `httpOnly`. O navegador envia sozinho; o JavaScript da página não lê o token. Páginas sem sessão vão para `/login`. As rotas `/api` respondem JSON (`401` ou `403`), para o `fetch` não receber HTML.

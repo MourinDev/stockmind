@@ -5,7 +5,6 @@
 */
 import { useState } from 'react'
 import { BellRing, BrainCircuit, Eye, EyeOff, Lock, Mail, QrCode, ShieldCheck } from 'lucide-react'
-import { USUARIOS_DEMO } from '../../lib/dados'
 import { Botao, Campo, MensagemErro, classeEntrada } from '../ui'
 
 const DESTAQUES = [
@@ -20,20 +19,14 @@ export default function TelaLogin({ onEntrar }) {
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [erro, setErro] = useState('')
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault()
     if (!email.trim() || !senha) {
       setErro('Preencha o e-mail e a senha.')
       return
     }
-    const resultado = onEntrar(email, senha)
+    const resultado = await onEntrar(email, senha)
     if (!resultado.ok) setErro(resultado.erro)
-  }
-
-  function preencherDemo(usuario) {
-    setEmail(usuario.email)
-    setSenha(usuario.senha)
-    setErro('')
   }
 
   return (
@@ -138,22 +131,6 @@ export default function TelaLogin({ onEntrar }) {
               </Botao>
             </form>
 
-            <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <span className="h-px flex-1 bg-slate-200" /> acesso de demonstração <span className="h-px flex-1 bg-slate-200" />
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              {USUARIOS_DEMO.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => preencherDemo(u)}
-                  className="rounded-xl border border-slate-200 px-3 py-2.5 text-left text-sm transition hover:border-royal-claro hover:bg-blue-50/50"
-                >
-                  <span className="block font-bold text-slate-800">{u.cargo}</span>
-                  <span className="block truncate text-xs text-slate-500">{u.email}</span>
-                </button>
-              ))}
-            </div>
           </div>
 
           <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-slate-400">

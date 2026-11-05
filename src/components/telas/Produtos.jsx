@@ -19,7 +19,7 @@ const ORDENACOES = {
   codigo: { rotulo: 'Código', comparar: (a, b) => a.codigo.localeCompare(b.codigo) },
 }
 
-export default function TelaProdutos({ produtos, onSalvar, onExcluir }) {
+export default function TelaProdutos({ produtos, onSalvar, onExcluir, podeGerenciar = false }) {
   const [busca, setBusca] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('todos')
@@ -46,22 +46,31 @@ export default function TelaProdutos({ produtos, onSalvar, onExcluir }) {
       <button onClick={() => setProdutoEtiqueta(p)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" title="Etiqueta QR Code">
         <QrCode size={17} />
       </button>
-      <button onClick={() => setProdutoEmEdicao(p)} className="rounded-lg p-2 text-slate-500 hover:bg-blue-50 hover:text-royal-claro" title="Editar">
-        <Pencil size={17} />
-      </button>
-      <button onClick={() => setProdutoExcluir(p)} className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600" title="Excluir">
-        <Trash2 size={17} />
-      </button>
+      {podeGerenciar && (
+        <button onClick={() => setProdutoEmEdicao(p)} className="rounded-lg p-2 text-slate-500 hover:bg-blue-50 hover:text-royal-claro" title="Editar">
+          <Pencil size={17} />
+        </button>
+      )}
+      {podeGerenciar && (
+        <button onClick={() => setProdutoExcluir(p)} className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600" title="Excluir">
+          <Trash2 size={17} />
+        </button>
+      )}
     </div>
   )
 
   return (
     <>
       <TituloTela titulo="Produtos" subtitulo={`${produtos.length} itens cadastrados · ${totalCriticos} em estoque crítico`}>
-        <Botao onClick={() => setProdutoEmEdicao(PRODUTO_VAZIO)}>
-          <Plus size={18} /> Novo produto
-        </Botao>
+        {podeGerenciar && (
+          <Botao onClick={() => setProdutoEmEdicao(PRODUTO_VAZIO)}>
+            <Plus size={18} /> Novo produto
+          </Botao>
+        )}
       </TituloTela>
+      {!podeGerenciar && (
+        <p className="mb-4 text-sm text-slate-500">Consulta liberada. Cadastro, edição e exclusão de produtos são do gestor.</p>
+      )}
 
       <Cartao>
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -201,16 +210,16 @@ export default function TelaProdutos({ produtos, onSalvar, onExcluir }) {
       {produtoExcluir && (
         <Modal titulo="Excluir produto?" onFechar={() => setProdutoExcluir(null)} largura="max-w-sm">
           <p className="text-sm text-slate-600">
-            <strong className="text-slate-900">{produtoExcluir.descricao}</strong> ({produtoExcluir.codigo}) será removido do cadastro. Produtos com
-            movimentações registradas não podem ser excluídos.
+            <strong className="text-slate-900">{produtoExcluir.descricao}</strong> ({produtoExcluir.codigo}) deixa de aparecer no cadastro. O histórico de
+            movimentações é mantido.
           </p>
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Botao variante="secundario" onClick={() => setProdutoExcluir(null)}>Cancelar</Botao>
             <Botao
               variante="perigo"
-              onClick={() => {
-                onExcluir(produtoExcluir)
-                setProdutoExcluir(null)
+              onClick={async () => {
+                const resultado = await onExcluir(produtoExcluir)
+                if (resultado?.ok !== false) setProdutoExcluir(null)
               }}
             >
               <Trash2 size={16} /> Excluir
@@ -229,11 +238,11 @@ function ModalProduto({ produtoInicial, onSalvar, onFechar }) {
 
   const alterar = (campo) => (e) => setDados({ ...dados, [campo]: e.target.value })
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault()
-    const resultado = onSalvar(dados)
+    const resultado = await onSalvar(dados)
     if (resultado.ok) onFechar()
-    else setErros(resultado.erros)
+    else setErros(resultado.erros ?? {})
   }
 
   const totalErros = Object.keys(erros).length

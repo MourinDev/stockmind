@@ -1,13 +1,12 @@
 'use client'
 
 /*
-  Guarda o estado do sistema e as ações que o alteram.
-  As telas só recebem dados por props e chamam estas ações.
-  O provider fica no layout, então o estoque continua na memória ao trocar de rota.
+  Estado da aplicação e ações que as telas chamam.
+  A sessão mora no cookie httpOnly. Este provider só espelha o usuário
+  e os dados que a API devolve, no formato que as telas já consomem.
 */
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { MOVIMENTACOES_INICIAIS, PRODUTOS_INICIAIS, USUARIOS_DEMO } from '../lib/dados'
 import { estaCritico, nivelEstoque, validarProduto } from '../lib/regras'
 import { ROTA_LOGIN, ROTAS } from '../lib/rotas'
 
@@ -19,11 +18,91 @@ export function useEstoque() {
   return contexto
 }
 
+function cargoDe(perfil) {
+  return perfil === 'admin' ? 'Gestor' : 'Operador'
+}
+
+function usuarioTela(usuario) {
+  return {
+    id: usuario.id,
+    nome: usuario.nome,
+    email: usuario.email,
+    perfil: usuario.perfil,
+    cargo: cargoDe(usuario.perfil),
+  }
+}
+
+function produtoTela(produto) {
+  return {
+    id: produto.id,
+    codigo: produto.codigo,
+    descricao: produto.descricao,
+    categoria: produto.categoria,
+    quantidade: produto.quantidadeAtual,
+    estoqueMinimo: produto.estoqueMinimo,
+    valorUnitario: produto.valorVenda,
+  }
+}
+
+function dataOcorrenciaDe(dataHora) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(dataHora))
+}
+
+function movimentacaoTela(movimentacao) {
+  return {
+    id: movimentacao.id,
+    produtoId: movimentacao.produtoId,
+    tipo: movimentacao.tipo === 'entrada' ? 'ENTRADA' : 'SAIDA',
+    quantidade: movimentacao.quantidade,
+    dataOcorrencia: dataOcorrenciaDe(movimentacao.dataHora),
+    observacao: movimentacao.observacao ?? '',
+    usuarioResponsavel: movimentacao.usuario?.nome ?? '',
+  }
+}
+
+async function api(caminho, opcoes = {}) {
+  const resposta = await fetch(caminho, {
+    ...opcoes,
+    headers: {
+      ...(opcoes.body ? { 'Content-Type': 'application/json' } : {}),
+      ...opcoes.headers,
+    },
+    credentials: 'include',
+  })
+  const corpo = await resposta.json().catch(() => ({}))
+  return { resposta, corpo }
+}
+
+async function listarMovimentacoes() {
+  const itens = []
+  let pagina = 1
+  let total = Infinity
+
+  while (itens.length < total) {
+    const { resposta, corpo } = await api(`/api/movimentacoes?pagina=${pagina}&porPagina=100`)
+    if (!resposta.ok) throw new Error(corpo.erro || 'Não foi possível carregar as movimentações.')
+    itens.push(...corpo.itens.map(movimentacaoTela))
+    total = corpo.total
+    if (!corpo.itens?.length) break
+    pagina += 1
+  }
+
+  return itens
+}
+
 export function ProvedorEstoque({ children }) {
   const router = useRouter()
   const [usuarioLogado, setUsuarioLogado] = useState(null)
-  const [produtos, setProdutos] = useState(PRODUTOS_INICIAIS)
-  const [movimentacoes, setMovimentacoes] = useState(MOVIMENTACOES_INICIAIS)
+  const [sessaoPronta, setSessaoPronta] = useState(false)
+  const [carregando, setCarregando] = useState(false)
+  const [erroCarga, setErroCarga] = useState('')
+  const [produtos, setProdutos] = useState([])
+  const [movimentacoes, setMovimentacoes] = useState([])
   const [menuAberto, setMenuAberto] = useState(false)
   const [aviso, setAviso] = useState(null)
 
@@ -35,119 +114,180 @@ export function ProvedorEstoque({ children }) {
 
   const mostrarAviso = (texto, tipo = 'sucesso') => setAviso({ texto, tipo, chave: Date.now() })
 
-  /* -----------------------------------------------------------------------
-     CAMADA DE DADOS
-     Hoje estas funções alteram o estado local. Com o back-end, cada uma vira
-     uma chamada async à API e o estado é atualizado com a resposta:
-       fazerLogin             -> POST   /api/auth/login
-       salvarProduto (novo)   -> POST   /api/produtos
-       salvarProduto (edição) -> PUT    /api/produtos/:id
-       excluirProduto         -> DELETE /api/produtos/:id
-       registrarMovimentacoes -> POST   /api/movimentacoes
-     E os dados iniciais viriam de GET /api/produtos e GET /api/movimentacoes.
-     Todas devolvem { ok, erro } para as telas não precisarem mudar.
-     ----------------------------------------------------------------------- */
+  async function carregarDados(aindaAtivo = () => true) {
+    setCarregando(true)
+    setErroCarga('')
+    try {
+      const [produtosResp, movimentos] = await Promise.all([api('/api/produtos'), listarMovimentacoes()])
+      if (!aindaAtivo()) return
+      if (!produtosResp.resposta.ok) throw new Error(produtosResp.corpo.erro || 'Não foi possível carregar os produtos.')
+      setProdutos(produtosResp.corpo.map(produtoTela))
+      setMovimentacoes(movimentos)
+    } catch (erro) {
+      if (aindaAtivo()) setErroCarga(erro.message || 'Não foi possível carregar os dados.')
+    } finally {
+      if (aindaAtivo()) setCarregando(false)
+    }
+  }
 
-  function fazerLogin(email, senha) {
-    const encontrado = USUARIOS_DEMO.find((u) => u.email === email.trim().toLowerCase() && u.senha === senha)
-    if (!encontrado) return { ok: false, erro: 'E-mail ou senha inválidos.' }
+  useEffect(() => {
+    let ativo = true
+    async function iniciar() {
+      const { resposta, corpo } = await api('/api/auth/me')
+      if (!ativo) return
+      if (resposta.ok) setUsuarioLogado(usuarioTela(corpo.usuario))
+      else if (resposta.status === 401) await api('/api/auth/logout', { method: 'POST' })
+      if (ativo) setSessaoPronta(true)
+    }
+    iniciar()
+    return () => {
+      ativo = false
+    }
+  }, [])
 
-    const { senha: _senha, ...dadosPublicos } = encontrado
-    setUsuarioLogado({ ...dadosPublicos, token: `demo-${Date.now()}` })
+  useEffect(() => {
+    if (!usuarioLogado) return undefined
+    let ativo = true
+    carregarDados(() => ativo)
+    return () => {
+      ativo = false
+    }
+    // A carga depende de quem entrou, não das funções recriadas a cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioLogado?.id])
+
+  async function fazerLogin(email, senha) {
+    const { resposta, corpo } = await api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim().toLowerCase(), senha }),
+    })
+    if (!resposta.ok) return { ok: false, erro: corpo.erro || 'E-mail ou senha inválidos' }
+
+    setUsuarioLogado(usuarioTela(corpo.usuario))
     setMenuAberto(false)
     router.push(ROTAS.dashboard)
     return { ok: true }
   }
 
-  function sair() {
+  async function sair() {
+    await api('/api/auth/logout', { method: 'POST' })
     setUsuarioLogado(null)
+    setProdutos([])
+    setMovimentacoes([])
     setMenuAberto(false)
     router.push(ROTA_LOGIN)
   }
 
-  function salvarProduto(dados) {
+  async function enviarMovimentacao(pedido) {
+    const { resposta, corpo } = await api('/api/movimentacoes', {
+      method: 'POST',
+      body: JSON.stringify({
+        produtoId: Number(pedido.produtoId),
+        tipo: pedido.tipo === 'ENTRADA' ? 'entrada' : 'saida',
+        quantidade: Number(pedido.quantidade),
+        ...(pedido.observacao?.trim() ? { observacao: pedido.observacao.trim() } : {}),
+      }),
+    })
+    if (!resposta.ok) return { ok: false, erro: corpo.erro || 'Não foi possível registrar a movimentação.' }
+
+    const produto = produtoTela(corpo.produto)
+    setProdutos((lista) => lista.map((item) => (item.id === produto.id ? produto : item)))
+    setMovimentacoes((lista) => [...lista, movimentacaoTela(corpo.movimentacao)])
+    return { ok: true, produto, saldos: { [produto.id]: produto.quantidade } }
+  }
+
+  async function salvarProduto(dados) {
     const erros = validarProduto(dados, produtos)
     if (Object.keys(erros).length > 0) return { ok: false, erros }
 
-    const produto = {
-      id: dados.id ?? Math.max(0, ...produtos.map((p) => p.id)) + 1,
+    const editando = Boolean(dados.id)
+    const corpo = {
       codigo: dados.codigo.trim().toUpperCase(),
       descricao: dados.descricao.trim(),
       categoria: dados.categoria,
-      quantidade: Number(dados.quantidade),
       estoqueMinimo: Number(dados.estoqueMinimo),
-      valorUnitario: Number(dados.valorUnitario),
+      valorVenda: Number(dados.valorUnitario),
+    }
+    if (!editando) corpo.valorCusto = Number(dados.valorUnitario)
+
+    const { resposta, corpo: recebido } = await api(editando ? `/api/produtos/${dados.id}` : '/api/produtos', {
+      method: editando ? 'PATCH' : 'POST',
+      body: JSON.stringify(corpo),
+    })
+    if (!resposta.ok) {
+      if (recebido.campos) return { ok: false, erros: recebido.campos }
+      if (resposta.status === 409) return { ok: false, erros: { codigo: recebido.erro } }
+      return { ok: false, erros: { descricao: recebido.erro || 'Não foi possível salvar o produto.' } }
     }
 
-    if (dados.id) {
-      setProdutos((lista) => lista.map((p) => (p.id === produto.id ? produto : p)))
-      mostrarAviso(`Produto ${produto.codigo} atualizado.`)
-    } else {
-      setProdutos((lista) => [...lista, produto])
-      mostrarAviso(`Produto ${produto.codigo} cadastrado.`)
+    const produto = produtoTela(recebido)
+    setProdutos((lista) => (editando ? lista.map((item) => (item.id === produto.id ? produto : item)) : [...lista, produto]))
+
+    const quantidadeInformada = Number(dados.quantidade)
+    const atual = editando ? (produtos.find((item) => item.id === dados.id)?.quantidade ?? produto.quantidade) : 0
+    const delta = quantidadeInformada - atual
+    if (delta !== 0) {
+      const movimento = await enviarMovimentacao({
+        produtoId: produto.id,
+        tipo: delta > 0 ? 'ENTRADA' : 'SAIDA',
+        quantidade: Math.abs(delta),
+        observacao: editando ? 'Ajuste de inventário' : 'Quantidade inicial',
+      })
+      if (!movimento.ok) {
+        if (!editando) {
+          mostrarAviso(`Produto ${produto.codigo} cadastrado, mas a quantidade inicial não entrou: ${movimento.erro}`, 'erro')
+          return { ok: true }
+        }
+        return { ok: false, erros: { quantidade: movimento.erro } }
+      }
     }
+
+    mostrarAviso(editando ? `Produto ${produto.codigo} atualizado.` : `Produto ${produto.codigo} cadastrado.`)
     return { ok: true }
   }
 
-  // Produto com histórico não pode sumir: as movimentações apontam para ele
-  // (no PostgreSQL isso é a chave estrangeira movimentacoes.produto_id).
-  function excluirProduto(produto) {
-    if (movimentacoes.some((m) => m.produtoId === produto.id)) {
-      mostrarAviso(`${produto.descricao} tem movimentações registradas e não pode ser excluído.`, 'erro')
+  async function excluirProduto(produto) {
+    const { resposta, corpo } = await api(`/api/produtos/${produto.id}`, { method: 'DELETE' })
+    if (!resposta.ok) {
+      mostrarAviso(corpo.erro || 'Não foi possível excluir o produto.', 'erro')
       return { ok: false }
     }
-    setProdutos((lista) => lista.filter((p) => p.id !== produto.id))
+    setProdutos((lista) => lista.filter((item) => item.id !== produto.id))
     mostrarAviso(`Produto ${produto.codigo} excluído.`)
     return { ok: true }
   }
 
-  // Regra central do estoque: ENTRADA soma, SAÍDA subtrai e nunca deixa negativo.
-  // Recebe uma lista para a ordem de reposição da IA gravar vários itens de uma vez.
-  function registrarMovimentacoes(pedidos) {
-    const saldos = Object.fromEntries(produtos.map((p) => [p.id, p.quantidade]))
-    const novas = []
-    let proximoId = Math.max(0, ...movimentacoes.map((m) => m.id)) + 1
-
-    for (const { produtoId, tipo, quantidade, dataOcorrencia, observacao } of pedidos) {
-      const produto = produtos.find((p) => p.id === Number(produtoId))
-      const qtd = Number(quantidade)
-
-      if (!produto) return { ok: false, erro: 'Selecione um produto.' }
-      if (!Number.isInteger(qtd) || qtd <= 0) return { ok: false, erro: 'A quantidade deve ser um número inteiro maior que zero.' }
-      if (!dataOcorrencia) return { ok: false, erro: 'Informe a data da ocorrência.' }
-      if (tipo === 'SAIDA' && qtd > saldos[produto.id]) {
-        return {
-          ok: false,
-          erro: `Saldo insuficiente: ${produto.descricao} tem só ${saldos[produto.id]} unidade(s) e a saída pedida é de ${qtd}.`,
-        }
+  async function registrarMovimentacoes(pedidos) {
+    const saldos = {}
+    for (const pedido of pedidos) {
+      const resultado = await enviarMovimentacao(pedido)
+      if (!resultado.ok) {
+        await carregarDados()
+        return resultado
       }
-
-      saldos[produto.id] += tipo === 'ENTRADA' ? qtd : -qtd
-      novas.push({
-        id: proximoId++,
-        produtoId: produto.id,
-        tipo,
-        quantidade: qtd,
-        dataOcorrencia,
-        observacao: observacao?.trim() || (tipo === 'ENTRADA' ? 'Entrada' : 'Saída'),
-        usuarioResponsavel: usuarioLogado.nome,
-      })
+      Object.assign(saldos, resultado.saldos)
     }
-
-    // Só grava se todos os itens passaram (no banco, isso é uma transação)
-    setProdutos((lista) => lista.map((p) => ({ ...p, quantidade: saldos[p.id] })))
-    setMovimentacoes((lista) => [...lista, ...novas])
     return { ok: true, saldos }
   }
 
-  function registrarMovimentacao(pedido) {
-    const resultado = registrarMovimentacoes([pedido])
+  async function registrarMovimentacao(pedido) {
+    const resultado = await registrarMovimentacoes([pedido])
     if (resultado.ok) {
-      const produto = produtos.find((p) => p.id === Number(pedido.produtoId))
+      const produto = produtos.find((item) => item.id === Number(pedido.produtoId))
       const verbo = pedido.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'
-      mostrarAviso(`${verbo} de ${pedido.quantidade} un. em ${produto.descricao}. Saldo atual: ${resultado.saldos[produto.id]}.`)
+      const saldo = resultado.saldos[Number(pedido.produtoId)]
+      mostrarAviso(`${verbo} de ${pedido.quantidade} un. em ${produto?.descricao ?? 'produto'}. Saldo atual: ${saldo}.`)
     }
     return resultado
+  }
+
+  async function buscarProdutoPorCodigo(codigo) {
+    const { resposta, corpo } = await api(`/api/produtos/codigo/${encodeURIComponent(codigo.trim())}`)
+    if (resposta.status === 404) return { ok: false }
+    if (!resposta.ok) return { ok: false, erro: corpo.erro || 'Não foi possível consultar o código.' }
+    const produto = produtoTela(corpo)
+    setProdutos((lista) => (lista.some((item) => item.id === produto.id) ? lista.map((item) => (item.id === produto.id ? produto : item)) : [...lista, produto]))
+    return { ok: true, produto }
   }
 
   function irPara(id) {
@@ -162,6 +302,9 @@ export function ProvedorEstoque({ children }) {
     <EstoqueContext.Provider
       value={{
         usuario: usuarioLogado,
+        sessaoPronta,
+        carregando,
+        erroCarga,
         produtos,
         movimentacoes,
         produtosCriticos,
@@ -175,6 +318,7 @@ export function ProvedorEstoque({ children }) {
         excluirProduto,
         registrarMovimentacao,
         registrarMovimentacoes,
+        buscarProdutoPorCodigo,
         mostrarAviso,
         irPara,
       }}

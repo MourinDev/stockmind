@@ -34,9 +34,9 @@ export default function TelaMovimentacoes({ produtos, movimentacoes, registrarMo
     setErro('')
   }
 
-  function enviar(evento) {
+  async function enviar(evento) {
     evento.preventDefault()
-    const resultado = registrarMovimentacao(formulario)
+    const resultado = await registrarMovimentacao(formulario)
     if (resultado.ok) setFormulario({ ...formularioVazio, tipo: formulario.tipo })
     else setErro(resultado.erro)
   }

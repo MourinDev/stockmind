@@ -22,7 +22,7 @@ function CantoMira({ posicao }) {
   return <span className={`absolute h-10 w-10 border-teal-400 ${estilos[posicao]}`} />
 }
 
-export default function TelaQRCode({ produtos, registrarMovimentacao }) {
+export default function TelaQRCode({ produtos, registrarMovimentacao, buscarProdutoPorCodigo }) {
   const [aba, setAba] = useState('leitor')
   const [codigoDigitado, setCodigoDigitado] = useState('')
   const [produtoLidoId, setProdutoLidoId] = useState(null)
@@ -35,27 +35,30 @@ export default function TelaQRCode({ produtos, registrarMovimentacao }) {
   // Busca pelo id para a ficha refletir o saldo atualizado após cada clique
   const produtoLido = produtos.find((p) => p.id === produtoLidoId)
 
-  function lerCodigo(codigo) {
-    const encontrado = produtos.find((p) => p.codigo.toUpperCase() === codigo.trim().toUpperCase())
+  async function lerCodigo(codigo) {
     setErro('')
     setLendo(true)
-    // Pequena espera só para dar a sensação de leitura antes do "bip"
-    setTimeout(() => {
-      setLendo(false)
-      if (encontrado) {
+    try {
+      const resultado = await buscarProdutoPorCodigo(codigo)
+      if (resultado.ok) {
         tocarBip()
-        setProdutoLidoId(encontrado.id)
+        setProdutoLidoId(resultado.produto.id)
         setContadorLeituras((n) => n + 1)
         setCodigoDigitado('')
       } else {
         setProdutoLidoId(null)
-        setErro(`Nenhum produto com o código "${codigo.toUpperCase()}".`)
+        setErro(resultado.erro || `Nenhum produto com o código "${codigo.trim().toUpperCase()}".`)
       }
-    }, 500)
+    } catch {
+      setProdutoLidoId(null)
+      setErro('Não foi possível consultar o código.')
+    } finally {
+      setLendo(false)
+    }
   }
 
-  function movimentar(tipo, quantidade) {
-    const resultado = registrarMovimentacao({
+  async function movimentar(tipo, quantidade) {
+    const resultado = await registrarMovimentacao({
       produtoId: produtoLido.id,
       tipo,
       quantidade,
