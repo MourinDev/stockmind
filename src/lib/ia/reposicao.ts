@@ -13,29 +13,29 @@ export const PARAMETROS_IA = {
   metodoSemSazonalidade: 'media_ponderada_v1',
 }
 
-export function diaDaSemanaISO(dia) {
+export function diaDaSemanaISO(dia: string) {
   const [ano, mes, diaMes] = dia.split('-').map(Number)
   return new Date(Date.UTC(ano, mes - 1, diaMes)).getUTCDay()
 }
 
-function paraCima(valor) {
+function paraCima(valor: number) {
   if (!Number.isFinite(valor) || valor <= 0) return 0
   return Math.ceil(Number(valor.toFixed(4)))
 }
 
-function media(valores) {
+function media(valores: number[]) {
   if (!valores.length) return 0
   return valores.reduce((soma, valor) => soma + valor, 0) / valores.length
 }
 
-function desvioAmostral(valores) {
+function desvioAmostral(valores: number[]) {
   if (valores.length < 2) return 0
   const base = media(valores)
   const soma = valores.reduce((acumulado, valor) => acumulado + (valor - base) ** 2, 0)
   return Math.sqrt(soma / (valores.length - 1))
 }
 
-function somarDias(dia, quantidade) {
+function somarDias(dia: string, quantidade: number) {
   const [ano, mes, diaMes] = dia.split('-').map(Number)
   const data = new Date(Date.UTC(ano, mes - 1, diaMes + quantidade))
   const mesNovo = String(data.getUTCMonth() + 1).padStart(2, '0')
@@ -43,15 +43,22 @@ function somarDias(dia, quantidade) {
   return `${data.getUTCFullYear()}-${mesNovo}-${diaNovo}`
 }
 
-function mediaDaJanela(quantidades, dias) {
+function mediaDaJanela(quantidades: number[], dias: number) {
   const trecho = quantidades.length >= dias ? quantidades.slice(-dias) : quantidades
   return media(trecho)
 }
 
-export function calcularReposicao({ saldo, consumoDiario }, parametros = PARAMETROS_IA) {
+type ItemConsumo = { dia?: unknown; quantidade?: unknown } | null | undefined
+
+export function calcularReposicao(
+  { saldo, consumoDiario }: { saldo: number; consumoDiario?: ItemConsumo[] | null },
+  parametros: typeof PARAMETROS_IA = PARAMETROS_IA,
+) {
   const saldoAtual = Number.isFinite(saldo) ? saldo : 0
   const serie = [...(consumoDiario ?? [])]
-    .filter((item) => item && typeof item.dia === 'string' && Number.isFinite(item.quantidade))
+    .filter((item): item is { dia: string; quantidade: number } => (
+      Boolean(item) && typeof item?.dia === 'string' && typeof item.quantidade === 'number' && Number.isFinite(item.quantidade)
+    ))
     .sort((a, b) => a.dia.localeCompare(b.dia))
 
   const inicio = serie.findIndex((item) => item.quantidade > 0)
@@ -75,14 +82,14 @@ export function calcularReposicao({ saldo, consumoDiario }, parametros = PARAMET
   const fatores = [1, 1, 1, 1, 1, 1, 1]
 
   if (sazonal && mediaSimples > 0) {
-    const grupos = [[], [], [], [], [], [], []]
+    const grupos: number[][] = [[], [], [], [], [], [], []]
     for (const item of historico) grupos[diaDaSemanaISO(item.dia)].push(item.quantidade)
     for (let dia = 0; dia < 7; dia++) {
       fatores[dia] = grupos[dia].length ? media(grupos[dia]) / mediaSimples : 1
     }
   }
 
-  function demanda(horizonte) {
+  function demanda(horizonte: number) {
     const ultimoDia = historico[historico.length - 1].dia
     let soma = 0
     for (let passo = 1; passo <= horizonte; passo++) {

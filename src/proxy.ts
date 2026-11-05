@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { nomeCookie, verificarSessao } from './lib/sessao'
 
-export async function proxy(request) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const token = request.cookies.get(nomeCookie())?.value
   const sessao = await verificarSessao(token)

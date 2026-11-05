@@ -10,7 +10,7 @@ export const ROTAS = {
 
 export const ROTA_LOGIN = '/login'
 
-export function idDaRota(pathname) {
+export function idDaRota(pathname: string) {
   const encontrada = Object.entries(ROTAS).find(([, href]) => href === pathname)
   return encontrada ? encontrada[0] : 'dashboard'
 }

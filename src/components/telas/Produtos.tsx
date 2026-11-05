@@ -3,7 +3,9 @@
 /*
   TELA 2: Cadastro e gestão de produtos (CRUD + validações).
 */
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
+import type { ProdutoTela } from '../../types/dominio'
+import type { ProdutoFormulario, ResultadoSalvar, ValorEstoque } from '../../types/estoque'
 import { ArrowDownUp, PackageSearch, Pencil, Plus, Printer, QrCode, Search, Trash2 } from 'lucide-react'
 import { CATEGORIAS } from '../../lib/dados'
 import { estaCritico, formatarMoeda, nivelEstoque } from '../../lib/regras'
@@ -12,21 +14,21 @@ import { Etiqueta } from '../QRCode'
 
 const PRODUTO_VAZIO = { codigo: '', descricao: '', categoria: '', quantidade: '', estoqueMinimo: '', valorUnitario: '' }
 
-const ORDENACOES = {
+const ORDENACOES: Record<string, { rotulo: string; comparar: (a: ProdutoTela, b: ProdutoTela) => number }> = {
   descricao: { rotulo: 'Nome (A-Z)', comparar: (a, b) => a.descricao.localeCompare(b.descricao) },
   nivel: { rotulo: 'Mais críticos primeiro', comparar: (a, b) => nivelEstoque(a) - nivelEstoque(b) },
   valor: { rotulo: 'Maior valor em estoque', comparar: (a, b) => b.quantidade * b.valorUnitario - a.quantidade * a.valorUnitario },
   codigo: { rotulo: 'Código', comparar: (a, b) => a.codigo.localeCompare(b.codigo) },
 }
 
-export default function TelaProdutos({ produtos, onSalvar, onExcluir, podeGerenciar = false }) {
+export default function TelaProdutos({ produtos, onSalvar, onExcluir, podeGerenciar = false }: { produtos: ProdutoTela[]; onSalvar: (dados: ProdutoFormulario) => Promise<ResultadoSalvar>; onExcluir: ValorEstoque['excluirProduto']; podeGerenciar?: boolean }) {
   const [busca, setBusca] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('todos')
   const [ordenacao, setOrdenacao] = useState('descricao')
-  const [produtoEmEdicao, setProdutoEmEdicao] = useState(null)
-  const [produtoEtiqueta, setProdutoEtiqueta] = useState(null)
-  const [produtoExcluir, setProdutoExcluir] = useState(null)
+  const [produtoEmEdicao, setProdutoEmEdicao] = useState<ProdutoFormulario | ProdutoTela | null>(null)
+  const [produtoEtiqueta, setProdutoEtiqueta] = useState<ProdutoTela | null>(null)
+  const [produtoExcluir, setProdutoExcluir] = useState<ProdutoTela | null>(null)
 
   const totalCriticos = produtos.filter(estaCritico).length
 
@@ -41,7 +43,7 @@ export default function TelaProdutos({ produtos, onSalvar, onExcluir, podeGerenc
     .sort(ORDENACOES[ordenacao].comparar)
 
   // Ações de cada produto, usadas tanto na tabela quanto nos cartões do celular
-  const acoes = (p) => (
+  const acoes = (p: ProdutoTela) => (
     <div className="flex justify-end gap-1">
       <button onClick={() => setProdutoEtiqueta(p)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" title="Etiqueta QR Code">
         <QrCode size={17} />
@@ -231,14 +233,14 @@ export default function TelaProdutos({ produtos, onSalvar, onExcluir, podeGerenc
   )
 }
 
-function ModalProduto({ produtoInicial, onSalvar, onFechar }) {
-  const [dados, setDados] = useState({ ...produtoInicial })
-  const [erros, setErros] = useState({})
+function ModalProduto({ produtoInicial, onSalvar, onFechar }: { produtoInicial: ProdutoFormulario | ProdutoTela; onSalvar: (dados: ProdutoFormulario) => Promise<ResultadoSalvar>; onFechar: () => void }) {
+  const [dados, setDados] = useState<ProdutoFormulario>({ ...produtoInicial })
+  const [erros, setErros] = useState<Record<string, string>>({})
   const editando = Boolean(produtoInicial.id)
 
-  const alterar = (campo) => (e) => setDados({ ...dados, [campo]: e.target.value })
+  const alterar = (campo: keyof ProdutoFormulario) => (e: { target: { value: string } }) => setDados({ ...dados, [campo]: e.target.value })
 
-  async function enviar(evento) {
+  async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const resultado = await onSalvar(dados)
     if (resultado.ok) onFechar()

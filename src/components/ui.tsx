@@ -3,10 +3,13 @@
 /*
   Componentes visuais reutilizados em todas as telas.
 */
-import { AlertTriangle, BrainCircuit, CheckCircle2, CupSoda, Milk, ShoppingBasket, ShowerHead, SprayCan, X, XCircle } from 'lucide-react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { AlertTriangle, BrainCircuit, CheckCircle2, CupSoda, Milk, ShoppingBasket, ShowerHead, SprayCan, X, XCircle, type LucideIcon } from 'lucide-react'
 import { COR_CATEGORIA, COR_CLASSE } from '../lib/dados'
+import type { AvisoTela, ConteudoTooltip } from '../types/estoque'
+import type { ClasseAbc, TipoMovimentacaoTela } from '../types/dominio'
 
-export function LogoStockMind({ escuro = false, compacto = false }) {
+export function LogoStockMind({ escuro = false, compacto = false }: { escuro?: boolean; compacto?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-royal via-royal-claro to-teal-marca text-white shadow-lg shadow-blue-900/30">
@@ -27,7 +30,7 @@ export function LogoStockMind({ escuro = false, compacto = false }) {
   )
 }
 
-export function Cartao({ titulo, subtitulo, acao, children, className = '' }) {
+export function Cartao({ titulo, subtitulo, acao, children, className = '' }: { titulo?: string; subtitulo?: string; acao?: ReactNode; children?: ReactNode; className?: string }) {
   return (
     <section className={`rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5 ${className}`}>
       {(titulo || acao) && (
@@ -44,7 +47,7 @@ export function Cartao({ titulo, subtitulo, acao, children, className = '' }) {
   )
 }
 
-export function TituloTela({ titulo, subtitulo, children }) {
+export function TituloTela({ titulo, subtitulo, children }: { titulo: string; subtitulo?: string; children?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -56,8 +59,10 @@ export function TituloTela({ titulo, subtitulo, children }) {
   )
 }
 
-export function Botao({ variante = 'primario', className = '', children, ...props }) {
-  const estilos = {
+type VarianteBotao = 'primario' | 'secundario' | 'sucesso' | 'perigo' | 'ia' | 'fantasma'
+
+export function Botao({ variante = 'primario', className = '', children, ...props }: { variante?: VarianteBotao; className?: string; children?: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  const estilos: Record<VarianteBotao, string> = {
     primario: 'bg-gradient-to-r from-royal to-royal-claro text-white shadow-md shadow-blue-900/20 hover:brightness-110',
     secundario: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
     sucesso: 'bg-emerald-600 text-white shadow-md shadow-emerald-900/20 hover:bg-emerald-700',
@@ -75,7 +80,7 @@ export function Botao({ variante = 'primario', className = '', children, ...prop
   )
 }
 
-export function Campo({ rotulo, erro, ajuda, children }) {
+export function Campo({ rotulo, erro, ajuda, children }: { rotulo: string; erro?: string; ajuda?: string; children?: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-semibold text-slate-700">{rotulo}</span>
@@ -91,13 +96,15 @@ export function Campo({ rotulo, erro, ajuda, children }) {
   )
 }
 
-export const classeEntrada = (temErro) =>
+export const classeEntrada = (temErro?: string | boolean) =>
   `w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition focus:ring-4 ${
     temErro ? 'border-red-400 bg-red-50 focus:ring-red-100' : 'border-slate-200 bg-slate-50 focus:border-royal-claro focus:bg-white focus:ring-blue-100'
   }`
 
-export function Selo({ cor, icone: Icone, children }) {
-  const cores = {
+type CorSelo = 'verde' | 'vermelho' | 'amarelo' | 'azul' | 'cinza'
+
+export function Selo({ cor, icone: Icone, children }: { cor: CorSelo; icone?: LucideIcon; children?: ReactNode }) {
+  const cores: Record<CorSelo, string> = {
     verde: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
     vermelho: 'bg-red-50 text-red-700 ring-red-600/20',
     amarelo: 'bg-amber-50 text-amber-800 ring-amber-600/20',
@@ -112,11 +119,11 @@ export function Selo({ cor, icone: Icone, children }) {
   )
 }
 
-export function SeloTipo({ tipo }) {
+export function SeloTipo({ tipo }: { tipo: TipoMovimentacaoTela }) {
   return tipo === 'ENTRADA' ? <Selo cor="azul">Entrada</Selo> : <Selo cor="cinza">Saída</Selo>
 }
 
-export function SeloClasse({ classe }) {
+export function SeloClasse({ classe }: { classe: ClasseAbc }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
       <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COR_CLASSE[classe] }} />
@@ -125,7 +132,7 @@ export function SeloClasse({ classe }) {
   )
 }
 
-export function SeloStatus({ critico }) {
+export function SeloStatus({ critico }: { critico: boolean }) {
   return critico ? (
     <Selo cor="vermelho" icone={AlertTriangle}>Crítico</Selo>
   ) : (
@@ -141,9 +148,9 @@ const ICONE_CATEGORIA = {
   Higiene: ShowerHead,
 }
 
-export function IconeCategoria({ categoria, tamanho = 'md' }) {
-  const Icone = ICONE_CATEGORIA[categoria] ?? ShoppingBasket
-  const cor = COR_CATEGORIA[categoria] ?? '#64748b'
+export function IconeCategoria({ categoria, tamanho = 'md' }: { categoria: string; tamanho?: 'sm' | 'md' }) {
+  const Icone = ICONE_CATEGORIA[categoria as keyof typeof ICONE_CATEGORIA] ?? ShoppingBasket
+  const cor = categoria in COR_CATEGORIA ? COR_CATEGORIA[categoria as keyof typeof COR_CATEGORIA] : '#64748b'
   const medidas = tamanho === 'sm' ? 'h-8 w-8' : 'h-10 w-10'
   return (
     <div className={`flex ${medidas} shrink-0 items-center justify-center rounded-xl`} style={{ background: `${cor}14`, color: cor }}>
@@ -154,7 +161,7 @@ export function IconeCategoria({ categoria, tamanho = 'md' }) {
 
 // Barra que mostra o saldo em relação ao estoque mínimo.
 // A escala vai até 2x o mínimo; o tracinho marca onde o mínimo fica.
-export function BarraNivel({ quantidade, minimo, largura = 'w-full' }) {
+export function BarraNivel({ quantidade, minimo, largura = 'w-full' }: { quantidade: number; minimo: number; largura?: string }) {
   const limite = Math.max(minimo * 2, 1)
   const percentual = Math.min(100, (quantidade / limite) * 100)
   const critico = quantidade <= minimo
@@ -169,7 +176,7 @@ export function BarraNivel({ quantidade, minimo, largura = 'w-full' }) {
   )
 }
 
-export function Modal({ titulo, subtitulo, onFechar, children, largura = 'max-w-lg' }) {
+export function Modal({ titulo, subtitulo, onFechar, children, largura = 'max-w-lg' }: { titulo: string; subtitulo?: string; onFechar: () => void; children?: ReactNode; largura?: string }) {
   return (
     <div className="animar-fundo fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 backdrop-blur-sm sm:items-center sm:p-4" onClick={onFechar}>
       <div
@@ -191,7 +198,7 @@ export function Modal({ titulo, subtitulo, onFechar, children, largura = 'max-w-
   )
 }
 
-export function Aviso({ aviso, onFechar }) {
+export function Aviso({ aviso, onFechar }: { aviso: AvisoTela; onFechar: () => void }) {
   const erro = aviso.tipo === 'erro'
   return (
     <div className="animar-aviso fixed bottom-4 left-4 right-4 z-[60] sm:left-auto sm:w-96">
@@ -211,7 +218,7 @@ export function Aviso({ aviso, onFechar }) {
   )
 }
 
-export function MensagemErro({ texto }) {
+export function MensagemErro({ texto }: { texto?: string }) {
   if (!texto) return null
   return (
     <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
@@ -221,7 +228,7 @@ export function MensagemErro({ texto }) {
   )
 }
 
-export function EstadoVazio({ icone: Icone, titulo, texto }) {
+export function EstadoVazio({ icone: Icone, titulo, texto }: { icone: LucideIcon; titulo: string; texto?: string }) {
   return (
     <div className="py-10 text-center">
       <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
@@ -234,7 +241,7 @@ export function EstadoVazio({ icone: Icone, titulo, texto }) {
 }
 
 // Abas em formato de "pílula", usadas nos filtros
-export function Abas({ opcoes, valor, onMudar }) {
+export function Abas({ opcoes, valor, onMudar }: { opcoes: { valor: string; rotulo: string; icone?: LucideIcon }[]; valor: string; onMudar: (valor: string) => void }) {
   return (
     <div className="inline-flex rounded-xl bg-slate-100 p-1">
       {opcoes.map((opcao) => (
@@ -259,7 +266,7 @@ export const animarGraficos =
   typeof window === 'undefined' || !window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // Caixinha do tooltip dos gráficos (recharts)
-export function TooltipGrafico({ active, payload, label, formatarRotulo, formatarValor = (v) => v }) {
+export function TooltipGrafico({ active, payload, label, formatarRotulo, formatarValor = (valor) => valor }: ConteudoTooltip) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl">

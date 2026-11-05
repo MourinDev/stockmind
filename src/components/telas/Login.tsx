@@ -3,7 +3,8 @@
 /*
   TELA 0: Login. Sem usuário autenticado, nenhuma outra tela é exibida.
 */
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
+import type { ResultadoLogin } from '../../types/estoque'
 import { BellRing, BrainCircuit, Eye, EyeOff, Lock, Mail, QrCode, ShieldCheck } from 'lucide-react'
 import { Botao, Campo, MensagemErro, classeEntrada } from '../ui'
 
@@ -13,13 +14,13 @@ const DESTAQUES = [
   { icone: QrCode, titulo: 'Operação por QR Code', texto: 'Entrada e saída direto da prateleira, com um toque.' },
 ]
 
-export default function TelaLogin({ onEntrar }) {
+export default function TelaLogin({ onEntrar }: { onEntrar: (email: string, senha: string) => Promise<ResultadoLogin> }) {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [mostrarSenha, setMostrarSenha] = useState(false)
   const [erro, setErro] = useState('')
 
-  async function enviar(evento) {
+  async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     if (!email.trim() || !senha) {
       setErro('Preencha o e-mail e a senha.')

@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { ROTA_LOGIN } from '../lib/rotas'
 import { BarraLateral, Cabecalho } from './Layout'
 import { useEstoque } from './provedor-estoque'
 import { Aviso } from './ui'
 
-export function CascaApp({ children }) {
+export function CascaApp({ children }: { children: ReactNode }) {
   const { usuario, sessaoPronta, carregando, erroCarga, produtosCriticos, menuAberto, setMenuAberto, aviso, setAviso, sair } = useEstoque()
   const pathname = usePathname()
   const router = useRouter()

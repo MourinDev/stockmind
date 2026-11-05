@@ -1,10 +1,11 @@
+import type { NextRequest } from 'next/server'
 import { exigirSessao } from '../../../../../lib/auth'
 import { erroInterno, json, jsonErro, produtoApi } from '../../../../../lib/http'
 import { prisma } from '../../../../../lib/prisma'
 
 export const runtime = 'nodejs'
 
-export async function GET(_request, { params }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ codigo: string }> }) {
   try {
     const acesso = await exigirSessao()
     if (acesso.resposta) return acesso.resposta

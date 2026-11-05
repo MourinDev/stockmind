@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import type { NextRequest } from 'next/server'
 import { prisma } from '../../../../lib/prisma'
 import { assinarSessao, nomeCookie, opcoesCookie } from '../../../../lib/sessao'
 import { errosZod, erroInterno, json, jsonErro, lerJson } from '../../../../lib/http'
@@ -8,7 +9,7 @@ export const runtime = 'nodejs'
 
 const MENSAGEM = 'E-mail ou senha inválidos'
 
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     const validado = loginSchema.safeParse(await lerJson(request))
     if (!validado.success) return errosZod(validado)

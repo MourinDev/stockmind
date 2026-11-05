@@ -3,20 +3,21 @@
   São funções puras: recebem dados e devolvem resultado, sem mexer em estado.
   Podem ir para o back-end (Node.js) praticamente sem alteração.
 */
+import type { ClasseAbc, DadosFormularioProduto, MovimentacaoTela, ProdutoTela, Urgencia } from '../types/dominio'
 import { JANELA_ANALISE_DIAS, PRAZO_ENTREGA_DIAS, diasAtras } from './dados'
 
-export const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+export const formatarMoeda = (valor: number) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-export function formatarData(dataTexto) {
+export function formatarData(dataTexto: string) {
   const [ano, mes, dia] = dataTexto.split('-')
   return `${dia}/${mes}/${ano}`
 }
 
-export const estaCritico = (produto) => produto.quantidade <= produto.estoqueMinimo
+export const estaCritico = (produto: Pick<ProdutoTela, 'quantidade' | 'estoqueMinimo'>) => produto.quantidade <= produto.estoqueMinimo
 
 // Quanto do estoque mínimo o saldo cobre (1 = exatamente no mínimo).
 // Serve para as barras de nível e para ordenar os alertas do mais grave ao menos grave.
-export const nivelEstoque = (produto) => (produto.estoqueMinimo > 0 ? produto.quantidade / produto.estoqueMinimo : Infinity)
+export const nivelEstoque = (produto: Pick<ProdutoTela, 'quantidade' | 'estoqueMinimo'>) => (produto.estoqueMinimo > 0 ? produto.quantidade / produto.estoqueMinimo : Infinity)
 
 /*
   Curva ABC (Gonçalves; Pereira & Costa):
@@ -27,7 +28,7 @@ export const nivelEstoque = (produto) => (produto.estoqueMinimo > 0 ? produto.qu
   O item que "cruza" a linha dos 80% ainda entra na A (por isso comparamos o
   acumulado ANTES de somar o próprio item).
 */
-export function calcularCurvaABC(produtos) {
+export function calcularCurvaABC(produtos: ProdutoTela[]) {
   const comValor = produtos.map((p) => ({ ...p, valorTotal: p.quantidade * p.valorUnitario }))
   const valorGeral = comValor.reduce((soma, p) => soma + p.valorTotal, 0)
   const ordenados = [...comValor].sort((a, b) => b.valorTotal - a.valorTotal)
@@ -38,7 +39,7 @@ export function calcularCurvaABC(produtos) {
     const acumuladoAntes = acumulado
     acumulado += percentual
 
-    let classe = 'C'
+    let classe: ClasseAbc = 'C'
     if (acumuladoAntes < 80) classe = 'A'
     else if (acumuladoAntes < 95) classe = 'B'
 
@@ -60,7 +61,7 @@ export function calcularCurvaABC(produtos) {
   - Planejar compra: saldo abaixo do ponto de reposição OU dura menos de 10 dias;
   - Estoque saudável: nenhum dos casos acima.
 */
-export function calcularSugestaoIA(produto, movimentacoes, diasCobertura) {
+export function calcularSugestaoIA(produto: ProdutoTela, movimentacoes: MovimentacaoTela[], diasCobertura: number) {
   const inicioJanela = diasAtras(JANELA_ANALISE_DIAS)
   const totalSaidas = movimentacoes
     .filter((m) => m.produtoId === produto.id && m.tipo === 'SAIDA' && m.dataOcorrencia >= inicioJanela)
@@ -73,7 +74,7 @@ export function calcularSugestaoIA(produto, movimentacoes, diasCobertura) {
   // toFixed evita que um 10.000000001 do ponto flutuante vire 11 no arredondamento
   const sugestaoCompra = Math.max(0, Math.ceil(Number((estoqueAlvo - produto.quantidade).toFixed(2))))
 
-  let urgencia = 'Estoque Saudável'
+  let urgencia: Urgencia = 'Estoque Saudável'
   if (produto.quantidade <= produto.estoqueMinimo || autonomiaDias <= PRAZO_ENTREGA_DIAS) {
     urgencia = 'Reposição Imediata'
   } else if (produto.quantidade <= pontoReposicao || autonomiaDias <= 10) {
@@ -85,7 +86,7 @@ export function calcularSugestaoIA(produto, movimentacoes, diasCobertura) {
 
 // Simula o saldo dia a dia mantendo o consumo médio atual, até zerar ou até o fim do horizonte.
 // É o que alimenta o gráfico de "projeção de ruptura" da IA.
-export function projetarEstoque(quantidadeAtual, consumoMedioDiario, horizonteDias = 30) {
+export function projetarEstoque(quantidadeAtual: number, consumoMedioDiario: number, horizonteDias = 30) {
   const pontos = []
   for (let dia = 0; dia <= horizonteDias; dia++) {
     const saldo = Math.max(0, quantidadeAtual - consumoMedioDiario * dia)
@@ -95,8 +96,8 @@ export function projetarEstoque(quantidadeAtual, consumoMedioDiario, horizonteDi
 }
 
 // Mesmas validações que o back-end vai repetir (nunca confiar só no front).
-export function validarProduto(dados, produtos) {
-  const erros = {}
+export function validarProduto(dados: DadosFormularioProduto, produtos: ProdutoTela[]) {
+  const erros: Record<string, string> = {}
   const codigo = dados.codigo.trim().toUpperCase()
 
   if (!codigo) erros.codigo = 'Informe o código do produto.'
@@ -122,7 +123,7 @@ export function validarProduto(dados, produtos) {
   return erros
 }
 
-export function baixarCSV(nomeArquivo, linhas) {
+export function baixarCSV(nomeArquivo: string, linhas: unknown[][]) {
   // Ponto e vírgula + BOM para o Excel em português abrir com acentos certos
   const conteudo = linhas
     .map((linha) => linha.map((campo) => `"${String(campo).replace(/"/g, '""')}"`).join(';'))
@@ -138,7 +139,9 @@ export function baixarCSV(nomeArquivo, linhas) {
 // "Bip" curto do leitor de QR Code, gerado pelo próprio navegador (sem arquivo de áudio)
 export function tocarBip() {
   try {
-    const audio = new (window.AudioContext || window.webkitAudioContext)()
+    const Construtor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!Construtor) return
+    const audio = new Construtor()
     const oscilador = audio.createOscillator()
     const volume = audio.createGain()
     oscilador.frequency.value = 1400

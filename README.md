@@ -7,9 +7,11 @@ Projeto Integrado de Engenharia de Produto (ENSOF8AN1), Uniceplac 2026.
 
 ```bash
 npm install
-npm run dev      # abre em http://localhost:3000
-npm run build    # gera a versão de produção
-npm run start    # serve a versão gerada por build
+npm run dev        # abre em http://localhost:3000
+npm run typecheck  # tsc --noEmit
+npm run build      # gera a versão de produção
+npm run start      # serve a versão gerada por build
+npm test           # cálculo de reposição, sem banco
 ```
 
 Logins de demonstração (a senha está só no banco, com hash bcrypt):
@@ -21,7 +23,7 @@ Logins de demonstração (a senha está só no banco, com hash bcrypt):
 
 Antes de `npm run dev`, copie `.env.example` para `.env` e preencha `DATABASE_URL`, `DIRECT_URL` e `SESSION_SECRET`. O segredo da sessão não pode ir para o cliente: gere com `openssl rand -base64 32` e não use o prefixo `NEXT_PUBLIC_`.
 
-Stack: Next.js 16 (App Router) + React 19, Prisma 7, PostgreSQL (Neon), Tailwind CSS, Recharts, lucide-react, qrcode-generator, `jose` (sessão) e `zod` (validação). Sem NextAuth.
+Stack: Next.js 16 (App Router) + React 19 + TypeScript, Prisma 7, PostgreSQL (Neon), Tailwind CSS, Recharts, lucide-react, qrcode-generator, `jose` (sessão) e `zod` (validação). Sem NextAuth.
 
 ## Arquitetura e explicação para a banca
 
@@ -30,38 +32,38 @@ Stack: Next.js 16 (App Router) + React 19, Prisma 7, PostgreSQL (Neon), Tailwind
 ```
 src/
 ├── app/
-│   ├── layout.js           fonte, CSS global, provider e casca (menu + cabeçalho)
-│   ├── page.js             TELA 1: /
-│   ├── login/page.js       TELA 0: /login
-│   ├── produtos/page.js    TELA 2: /produtos
-│   ├── movimentacoes/page.js
-│   ├── qrcode/page.js
-│   ├── ia/page.js
-│   ├── relatorios/page.js
+│   ├── layout.tsx          fonte, CSS global, provider e casca (menu + cabeçalho)
+│   ├── page.tsx            TELA 1: /
+│   ├── login/page.tsx      TELA 0: /login
+│   ├── produtos/page.tsx   TELA 2: /produtos
+│   ├── movimentacoes/page.tsx
+│   ├── qrcode/page.tsx
+│   ├── ia/page.tsx
+│   ├── relatorios/page.tsx
 │   └── globals.css
 ├── components/
-│   ├── provedor-estoque.jsx  estado global e camada de dados (as ações que alteram o estoque)
-│   ├── casca-app.jsx         menu, cabeçalho e proteção das rotas sem sessão
-│   ├── ui.jsx                peças visuais reutilizáveis (cartão, botão, campo, modal, selos...)
-│   ├── Layout.jsx            menu lateral, cabeçalho e central de alertas
-│   ├── QRCode.jsx            geração do QR Code e da etiqueta de prateleira
+│   ├── provedor-estoque.tsx  estado global e camada de dados (as ações que alteram o estoque)
+│   ├── casca-app.tsx         menu, cabeçalho e proteção das rotas sem sessão
+│   ├── ui.tsx                peças visuais reutilizáveis (cartão, botão, campo, modal, selos...)
+│   ├── Layout.tsx            menu lateral, cabeçalho e central de alertas
+│   ├── QRCode.tsx            geração do QR Code e da etiqueta de prateleira
 │   └── telas/
-│       ├── Login.jsx           TELA 0: autenticação
-│       ├── Dashboard.jsx       TELA 1: indicadores, gráficos e alertas
-│       ├── Produtos.jsx        TELA 2: cadastro com validações
-│       ├── Movimentacoes.jsx   TELA 3: entradas e saídas
-│       ├── OperacaoQR.jsx      TELA 4: leitor de QR Code e etiquetas
-│       ├── InteligenciaIA.jsx  TELA 5: sugestão de reposição e projeção de ruptura
-│       └── Relatorios.jsx      TELA 6: Curva ABC (Pareto) e histórico com CSV
+│       ├── Login.tsx           TELA 0: autenticação
+│       ├── Dashboard.tsx       TELA 1: indicadores, gráficos e alertas
+│       ├── Produtos.tsx        TELA 2: cadastro com validações
+│       ├── Movimentacoes.tsx   TELA 3: entradas e saídas
+│       ├── OperacaoQR.tsx      TELA 4: leitor de QR Code e etiquetas
+│       ├── InteligenciaIA.tsx  TELA 5: sugestão de reposição e projeção de ruptura
+│       └── Relatorios.tsx      TELA 6: Curva ABC (Pareto) e histórico com CSV
 └── lib/
-    ├── dados.js              cores, categorias da tela e parâmetros da IA
-    ├── regras.js             regras de negócio puras: Curva ABC, IA, validações, CSV
-    └── rotas.js              ids do menu e caminhos do App Router
+    ├── dados.ts              cores, categorias da tela e parâmetros da IA
+    ├── regras.ts             regras de negócio puras: Curva ABC, IA, validações, CSV
+    └── rotas.ts              ids do menu e caminhos do App Router
 ```
 
-- **`dados.js`**: cores dos gráficos, lista de categorias do formulário e parâmetros da IA. Os produtos e o histórico vêm do banco (veja `docs/api.md`).
-- **`regras.js`**: funções puras (`calcularCurvaABC`, `calcularSugestaoIA`, `projetarEstoque`, `validarProduto`, `baixarCSV`). O dashboard, os relatórios e a IA ainda calculam no cliente com essas funções.
-- **`provedor-estoque.jsx`**: busca e grava pela API e devolve o mesmo formato de antes para as telas. A sessão é o cookie `stockmind_sessao`. Recarregar a página mantém o login.
+- **`dados.ts`**: cores dos gráficos, lista de categorias do formulário e parâmetros da IA. Os produtos e o histórico vêm do banco (veja `docs/api.md`).
+- **`regras.ts`**: funções puras (`calcularCurvaABC`, `calcularSugestaoIA`, `projetarEstoque`, `validarProduto`, `baixarCSV`). O dashboard, os relatórios e a IA ainda calculam no cliente com essas funções.
+- **`provedor-estoque.tsx`**: busca e grava pela API e devolve o mesmo formato de antes para as telas. A sessão é o cookie `stockmind_sessao`. Recarregar a página mantém o login.
 
 ### Destaques visuais para mostrar na apresentação
 

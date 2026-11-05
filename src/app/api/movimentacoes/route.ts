@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { exigirSessao } from '../../../lib/auth'
 import { erroInterno, errosZod, json, jsonErro, lerJson, movimentacaoApi, produtoApi, tratarErroBanco } from '../../../lib/http'
 import { prisma } from '../../../lib/prisma'
@@ -10,15 +11,15 @@ const incluir = {
   produto: { select: { id: true, codigo: true, descricao: true } },
 }
 
-function inicioDoDia(dia) {
+function inicioDoDia(dia: string) {
   return new Date(`${dia}T00:00:00.000-03:00`)
 }
 
-function fimDoDia(dia) {
+function fimDoDia(dia: string) {
   return new Date(`${dia}T23:59:59.999-03:00`)
 }
 
-export async function GET(request) {
+export async function GET(request: NextRequest) {
   try {
     const acesso = await exigirSessao()
     if (acesso.resposta) return acesso.resposta
@@ -57,7 +58,7 @@ export async function GET(request) {
   }
 }
 
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     const acesso = await exigirSessao(['admin', 'operador'])
     if (acesso.resposta) return acesso.resposta
@@ -88,6 +89,7 @@ export async function POST(request) {
       include: { categoria: true },
     })
 
+    if (!atualizado) throw new Error('Produto não encontrado após a movimentação.')
     return json({ movimentacao: movimentacaoApi(criada), produto: produtoApi(atualizado) }, 201)
   } catch (erro) {
     return tratarErroBanco(erro, 'POST /api/movimentacoes')

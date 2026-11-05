@@ -3,14 +3,16 @@
 /*
   TELA 1: Dashboard gerencial (Business Intelligence).
 */
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Boxes, BrainCircuit, CheckCircle2, Plus, Wallet } from 'lucide-react'
-import { CATEGORIAS, COR_CATEGORIA, COR_ENTRADA, COR_SAIDA, JANELA_ANALISE_DIAS, diasAtras } from '../../lib/dados'
+import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Boxes, BrainCircuit, CheckCircle2, Plus, Wallet, type LucideIcon } from 'lucide-react'
+import { CATEGORIAS, COR_ENTRADA, COR_SAIDA, JANELA_ANALISE_DIAS, corDaCategoria, diasAtras } from '../../lib/dados'
 import { calcularSugestaoIA, formatarData, formatarMoeda, saudacao } from '../../lib/regras'
+import type { MovimentacaoTela, ProdutoTela, UsuarioTela } from '../../types/dominio'
+import type { ValorEstoque } from '../../types/estoque'
 import { BarraNivel, Botao, Cartao, EstadoVazio, IconeCategoria, TooltipGrafico, animarGraficos } from '../ui'
 
-function CartaoKPI({ titulo, valor, detalhe, icone: Icone, cor, variacao }) {
+function CartaoKPI({ titulo, valor, detalhe, icone: Icone, cor, variacao }: { titulo: string; valor: ReactNode; detalhe: string; icone: LucideIcon; cor: string; variacao?: number }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between">
@@ -34,7 +36,7 @@ function CartaoKPI({ titulo, valor, detalhe, icone: Icone, cor, variacao }) {
   )
 }
 
-export default function TelaDashboard({ produtos, movimentacoes, usuario, produtosCriticos, irPara }) {
+export default function TelaDashboard({ produtos, movimentacoes, usuario, produtosCriticos, irPara }: { produtos: ProdutoTela[]; movimentacoes: MovimentacaoTela[]; usuario: UsuarioTela; produtosCriticos: ProdutoTela[]; irPara: ValorEstoque['irPara']; registrarMovimentacao?: ValorEstoque['registrarMovimentacao'] }) {
   const valorImobilizado = produtos.reduce((soma, p) => soma + p.quantidade * p.valorUnitario, 0)
   const movimentacoesPeriodo = movimentacoes.filter((m) => m.dataOcorrencia >= diasAtras(JANELA_ANALISE_DIAS))
 
@@ -79,7 +81,7 @@ export default function TelaDashboard({ produtos, movimentacoes, usuario, produt
   const custoUrgentes = urgentes.reduce((s, i) => s + i.sugestaoCompra * i.p.valorUnitario, 0)
 
   const recentes = [...movimentacoes].sort((a, b) => b.dataOcorrencia.localeCompare(a.dataOcorrencia) || b.id - a.id).slice(0, 6)
-  const produtoPorId = (id) => produtos.find((p) => p.id === id)
+  const produtoPorId = (id: number) => produtos.find((p) => p.id === id)
 
   return (
     <>
@@ -167,7 +169,7 @@ export default function TelaDashboard({ produtos, movimentacoes, usuario, produt
                 <CartesianGrid vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="data" tickFormatter={(d) => d.slice(8)} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<TooltipGrafico formatarRotulo={formatarData} formatarValor={(v) => `${v} un.`} />} cursor={{ fill: '#f1f5f9' }} />
+                <Tooltip content={<TooltipGrafico formatarRotulo={(rotulo) => formatarData(String(rotulo ?? ''))} formatarValor={(v) => `${v ?? ''} un.`} />} cursor={{ fill: '#f1f5f9' }} />
                 <Bar isAnimationActive={animarGraficos} dataKey="Entradas" fill={COR_ENTRADA} radius={[4, 4, 0, 0]} maxBarSize={14} />
                 <Bar isAnimationActive={animarGraficos} dataKey="Saídas" fill={COR_SAIDA} radius={[4, 4, 0, 0]} maxBarSize={14} />
               </BarChart>
@@ -181,10 +183,10 @@ export default function TelaDashboard({ produtos, movimentacoes, usuario, produt
               <PieChart>
                 <Pie isAnimationActive={animarGraficos} data={valorPorCategoria} dataKey="valor" nameKey="categoria" innerRadius="68%" outerRadius="100%" paddingAngle={2} stroke="#fff" strokeWidth={2}>
                   {valorPorCategoria.map((c) => (
-                    <Cell key={c.categoria} fill={COR_CATEGORIA[c.categoria]} />
+                    <Cell key={c.categoria} fill={corDaCategoria(c.categoria)} />
                   ))}
                 </Pie>
-                <Tooltip content={<TooltipGrafico formatarRotulo={(_, payload) => payload[0]?.name} formatarValor={(v) => formatarMoeda(v)} />} />
+                <Tooltip content={<TooltipGrafico formatarRotulo={(_, itens) => itens[0]?.name} formatarValor={(v) => formatarMoeda(Number(v ?? 0))} />} />
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
@@ -195,7 +197,7 @@ export default function TelaDashboard({ produtos, movimentacoes, usuario, produt
           <ul className="mt-4 space-y-2">
             {[...valorPorCategoria].sort((a, b) => b.valor - a.valor).map((c) => (
               <li key={c.categoria} className="flex items-center gap-2 text-sm">
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COR_CATEGORIA[c.categoria] }} />
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: corDaCategoria(c.categoria) }} />
                 <span className="flex-1 text-slate-700">{c.categoria}</span>
                 <span className="font-semibold text-slate-900">{formatarMoeda(c.valor)}</span>
                 <span className="w-12 text-right text-xs text-slate-500">{((c.valor / valorImobilizado) * 100).toFixed(1)}%</span>

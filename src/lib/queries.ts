@@ -1,15 +1,15 @@
 import 'server-only'
 import { prisma } from './prisma'
 
-function numero(valor) {
+function numero(valor: unknown) {
   if (valor == null) return 0
   if (typeof valor === 'number') return valor
   if (typeof valor === 'bigint') return Number(valor)
-  if (typeof valor.toNumber === 'function') return valor.toNumber()
+  if (typeof valor === 'object' && 'toNumber' in valor && typeof valor.toNumber === 'function') return Number(valor.toNumber())
   return Number(valor)
 }
 
-function dataISO(valor) {
+function dataISO(valor: Date | string) {
   const data = valor instanceof Date ? valor : new Date(valor)
   const ano = data.getUTCFullYear()
   const mes = String(data.getUTCMonth() + 1).padStart(2, '0')
@@ -18,7 +18,18 @@ function dataISO(valor) {
 }
 
 export async function listarProdutosEstoqueBaixo() {
-  const linhas = await prisma.$queryRaw`
+  const linhas = await prisma.$queryRaw<Array<{
+    id: number
+    codigo: string
+    descricao: string
+    categoria: string
+    cor: string
+    quantidade_atual: number
+    estoque_minimo: number
+    valor_custo: unknown
+    valor_venda: unknown
+    qr_code: string
+  }>>`
     SELECT id, codigo, descricao, categoria, cor, quantidade_atual, estoque_minimo, valor_custo, valor_venda, qr_code
     FROM vw_produtos_estoque_baixo
     ORDER BY quantidade_atual, descricao
@@ -39,7 +50,11 @@ export async function listarProdutosEstoqueBaixo() {
 }
 
 export async function obterValorTotalEstoque() {
-  const linhas = await prisma.$queryRaw`
+  const linhas = await prisma.$queryRaw<Array<{
+    valor_custo_total: unknown
+    valor_venda_total: unknown
+    produtos_ativos: number
+  }>>`
     SELECT valor_custo_total, valor_venda_total, produtos_ativos
     FROM vw_valor_total_estoque
   `
@@ -53,7 +68,14 @@ export async function obterValorTotalEstoque() {
   }
 }
 
-function mapearPeriodo(linha) {
+function mapearPeriodo(linha: {
+  dia: Date | string
+  mes: Date | string
+  tipo: string
+  total_movimentacoes: number
+  quantidade_total: number
+  valor_total: unknown
+}) {
   return {
     dia: dataISO(linha.dia),
     mes: dataISO(linha.mes),
@@ -65,7 +87,7 @@ function mapearPeriodo(linha) {
 }
 
 export async function listarMovimentacoesPorPeriodo() {
-  const linhas = await prisma.$queryRaw`
+  const linhas = await prisma.$queryRaw<Parameters<typeof mapearPeriodo>[0][]>`
     SELECT dia, mes, tipo, total_movimentacoes, quantidade_total, valor_total
     FROM vw_movimentacoes_por_periodo
     ORDER BY dia, tipo
@@ -73,7 +95,12 @@ export async function listarMovimentacoesPorPeriodo() {
   return linhas.map(mapearPeriodo)
 }
 
-function mapearGrupo(linha) {
+function mapearGrupo(linha: {
+  tipo: string
+  total_movimentacoes: number
+  quantidade_total: number
+  valor_total: unknown
+}) {
   return {
     tipo: linha.tipo,
     totalMovimentacoes: linha.total_movimentacoes,
@@ -83,7 +110,16 @@ function mapearGrupo(linha) {
 }
 
 export async function listarMovimentacoesPorProduto() {
-  const linhas = await prisma.$queryRaw`
+  const linhas = await prisma.$queryRaw<Array<{
+    produto_id: number
+    codigo: string
+    descricao: string
+    categoria: string
+    tipo: string
+    total_movimentacoes: number
+    quantidade_total: number
+    valor_total: unknown
+  }>>`
     SELECT produto_id, codigo, descricao, categoria, tipo, total_movimentacoes, quantidade_total, valor_total
     FROM vw_movimentacoes_por_produto
     ORDER BY descricao, tipo
@@ -99,7 +135,14 @@ export async function listarMovimentacoesPorProduto() {
 }
 
 export async function listarMovimentacoesPorCategoria() {
-  const linhas = await prisma.$queryRaw`
+  const linhas = await prisma.$queryRaw<Array<{
+    categoria_id: number
+    categoria: string
+    tipo: string
+    total_movimentacoes: number
+    quantidade_total: number
+    valor_total: unknown
+  }>>`
     SELECT categoria_id, categoria, tipo, total_movimentacoes, quantidade_total, valor_total
     FROM vw_movimentacoes_por_categoria
     ORDER BY categoria, tipo
@@ -113,7 +156,14 @@ export async function listarMovimentacoesPorCategoria() {
 }
 
 export async function listarProdutosMaisMovimentados() {
-  const linhas = await prisma.$queryRaw`
+  const linhas = await prisma.$queryRaw<Array<{
+    produto_id: number
+    codigo: string
+    descricao: string
+    categoria: string
+    quantidade_saida: number
+    total_saidas: number
+  }>>`
     SELECT produto_id, codigo, descricao, categoria, quantidade_saida, total_saidas
     FROM vw_produtos_mais_movimentados
     ORDER BY quantidade_saida DESC, descricao
@@ -130,7 +180,14 @@ export async function listarProdutosMaisMovimentados() {
 }
 
 export async function listarConsumoMedioDiario() {
-  const linhas = await prisma.$queryRaw`
+  const linhas = await prisma.$queryRaw<Array<{
+    produto_id: number
+    codigo: string
+    descricao: string
+    consumo_medio_30: unknown
+    consumo_medio_60: unknown
+    consumo_medio_90: unknown
+  }>>`
     SELECT produto_id, codigo, descricao, consumo_medio_30, consumo_medio_60, consumo_medio_90
     FROM vw_consumo_medio_diario
     ORDER BY consumo_medio_30 DESC, descricao
@@ -147,7 +204,12 @@ export async function listarConsumoMedioDiario() {
 }
 
 export async function listarConsumoDiarioHistorico() {
-  const linhas = await prisma.$queryRaw`
+  const linhas = await prisma.$queryRaw<Array<{
+    produto_id: number
+    codigo: string
+    dia: Date | string
+    quantidade_saida: unknown
+  }>>`
     SELECT produto_id, codigo, dia, quantidade_saida
     FROM vw_consumo_diario_historico
     ORDER BY produto_id, dia

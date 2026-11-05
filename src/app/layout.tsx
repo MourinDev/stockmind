@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Montserrat } from 'next/font/google'
 import { CascaApp } from '../components/casca-app'
 import { ProvedorEstoque } from '../components/provedor-estoque'
@@ -14,7 +15,7 @@ export const metadata = {
   description: 'Sistema inteligente de controle de estoque para pequenos comércios.',
 }
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className={montserrat.variable}>
       <body className="bg-slate-100">

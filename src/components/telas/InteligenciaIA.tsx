@@ -4,22 +4,24 @@
   TELA 5: sugestões de reposição gravadas pelo servidor.
   Aceitar só muda o status. A entrada no estoque continua na tela de movimentações.
 */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { AlertTriangle, BrainCircuit, CalendarClock, CheckCircle2, Clock, PackageCheck, RefreshCw, X } from 'lucide-react'
+import { AlertTriangle, BrainCircuit, CalendarClock, CheckCircle2, Clock, PackageCheck, RefreshCw, X, type LucideIcon } from 'lucide-react'
 import { COR_ENTRADA, PRAZO_ENTREGA_DIAS } from '../../lib/dados'
 import { formatarData, projetarEstoque } from '../../lib/regras'
+import type { StatusSugestao, SugestaoApi } from '../../types/dominio'
+import type { ValorEstoque } from '../../types/estoque'
 import { Botao, Cartao, EstadoVazio, IconeCategoria, Selo, TituloTela, TooltipGrafico, animarGraficos } from '../ui'
 
 const HORIZONTE_PROJECAO = 30
 const ROTULO_STATUS = { pendente: 'Pendente', aceita: 'Aceita', ignorada: 'Ignorada' }
-const ESTILO_STATUS = {
+const ESTILO_STATUS: Record<StatusSugestao, { cor: 'amarelo' | 'verde' | 'cinza'; icone: LucideIcon }> = {
   pendente: { cor: 'amarelo', icone: Clock },
   aceita: { cor: 'verde', icone: CheckCircle2 },
   ignorada: { cor: 'cinza', icone: X },
 }
 
-function dataCurta(iso) {
+function dataCurta(iso: string) {
   const data = new Date(iso)
   const texto = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Sao_Paulo',
@@ -30,7 +32,7 @@ function dataCurta(iso) {
   return formatarData(texto)
 }
 
-function ResumoUrgencia({ titulo, valor, detalhe, icone: Icone, classes }) {
+function ResumoUrgencia({ titulo, valor, detalhe, icone: Icone, classes }: { titulo: string; valor: ReactNode; detalhe: string; icone: LucideIcon; classes: string }) {
   return (
     <div className={`rounded-2xl border p-4 ${classes}`}>
       <div className="flex items-center gap-2 text-sm font-semibold">
@@ -42,13 +44,13 @@ function ResumoUrgencia({ titulo, valor, detalhe, icone: Icone, classes }) {
   )
 }
 
-export default function TelaIA({ podeGerenciar, listarSugestoes, gerarSugestoes, decidirSugestao, mostrarAviso }) {
-  const [sugestoes, setSugestoes] = useState([])
+export default function TelaIA({ podeGerenciar, listarSugestoes, gerarSugestoes, decidirSugestao, mostrarAviso }: { podeGerenciar: boolean; listarSugestoes: ValorEstoque['listarSugestoes']; gerarSugestoes: ValorEstoque['gerarSugestoes']; decidirSugestao: ValorEstoque['decidirSugestao']; mostrarAviso: ValorEstoque['mostrarAviso'] }) {
+  const [sugestoes, setSugestoes] = useState<SugestaoApi[]>([])
   const [carregando, setCarregando] = useState(true)
   const [gerando, setGerando] = useState(false)
   const [erro, setErro] = useState('')
   const [resumo, setResumo] = useState('')
-  const [sugestaoGraficoId, setSugestaoGraficoId] = useState(null)
+  const [sugestaoGraficoId, setSugestaoGraficoId] = useState<number | null>(null)
 
   async function carregar() {
     const resultado = await listarSugestoes()
@@ -80,7 +82,7 @@ export default function TelaIA({ podeGerenciar, listarSugestoes, gerarSugestoes,
 
   const itemGrafico = sugestoes.find((item) => item.id === sugestaoGraficoId) ?? sugestoes[0]
   const projecao = itemGrafico ? projetarEstoque(itemGrafico.produto.saldo, itemGrafico.consumoMedioDiario, HORIZONTE_PROJECAO) : []
-  const contagem = (status) => sugestoes.filter((item) => item.status === status).length
+  const contagem = (status: StatusSugestao) => sugestoes.filter((item) => item.status === status).length
   const pendentes = sugestoes.filter((item) => item.status === 'pendente')
 
   async function gerar() {
@@ -97,7 +99,7 @@ export default function TelaIA({ podeGerenciar, listarSugestoes, gerarSugestoes,
     await carregar()
   }
 
-  async function decidir(item, status) {
+  async function decidir(item: SugestaoApi, status: 'aceita' | 'ignorada') {
     const resultado = await decidirSugestao(item.id, status)
     if (!resultado.ok) {
       mostrarAviso(resultado.erro, 'erro')

@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { exigirSessao } from '../../../../lib/auth'
 import { erroInterno, errosZod, json, jsonErro, lerJson, produtoApi, tratarErroBanco } from '../../../../lib/http'
 import { prisma } from '../../../../lib/prisma'
@@ -7,13 +8,13 @@ export const runtime = 'nodejs'
 
 const comCategoria = { categoria: true }
 
-function lerId(id) {
+function lerId(id: string) {
   const numero = Number(id)
   if (!Number.isInteger(numero) || numero <= 0) return null
   return numero
 }
 
-export async function GET(_request, { params }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const acesso = await exigirSessao()
     if (acesso.resposta) return acesso.resposta
@@ -33,7 +34,7 @@ export async function GET(_request, { params }) {
   }
 }
 
-export async function PATCH(request, { params }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const acesso = await exigirSessao(['admin'])
     if (acesso.resposta) return acesso.resposta
@@ -71,7 +72,7 @@ export async function PATCH(request, { params }) {
   }
 }
 
-export async function DELETE(_request, { params }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const acesso = await exigirSessao(['admin'])
     if (acesso.resposta) return acesso.resposta

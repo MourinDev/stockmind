@@ -2,7 +2,8 @@ import 'server-only'
 import { PrismaNeon } from '@prisma/adapter-neon'
 import { PrismaClient } from '../generated/prisma/client'
 
-const globalForPrisma = globalThis
+// O cliente vive no global do processo fora de produção, para o hot reload não abrir conexão nova.
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient }
 
 function criarCliente() {
   const connectionString = process.env.DATABASE_URL

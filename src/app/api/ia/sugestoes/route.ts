@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { exigirSessao } from '../../../../lib/auth'
 import { erroInterno, errosZod, json } from '../../../../lib/http'
 import { incluirProduto, ordenarSugestoes, sugestaoApi } from '../../../../lib/ia/apresentar'
@@ -6,7 +7,7 @@ import { filtroSugestoesSchema } from '../../../../lib/validacao'
 
 export const runtime = 'nodejs'
 
-export async function GET(request) {
+export async function GET(request: NextRequest) {
   try {
     const acesso = await exigirSessao(['admin', 'operador'])
     if (acesso.resposta) return acesso.resposta

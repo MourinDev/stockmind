@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { exigirSessao } from '../../../lib/auth'
 import { erroInterno, errosZod, json, jsonErro, lerJson, produtoApi, tratarErroBanco } from '../../../lib/http'
 import { prisma } from '../../../lib/prisma'
@@ -7,7 +8,7 @@ export const runtime = 'nodejs'
 
 const comCategoria = { categoria: true }
 
-export async function GET(request) {
+export async function GET(request: NextRequest) {
   try {
     const acesso = await exigirSessao()
     if (acesso.resposta) return acesso.resposta
@@ -40,7 +41,7 @@ export async function GET(request) {
   }
 }
 
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     const acesso = await exigirSessao(['admin'])
     if (acesso.resposta) return acesso.resposta

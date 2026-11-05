@@ -1,10 +1,21 @@
 import 'server-only'
+import type { Prisma } from '../../generated/prisma/client'
+import type { ConsumoDia, ResumoGeracao } from '../../types/dominio'
 import { prisma } from '../prisma'
 import { listarConsumoDiarioHistorico } from '../queries'
 import { calcularReposicao } from './reposicao'
 
-async function gravarPendente(tx, dados) {
-  const linhas = await tx.$queryRaw`
+type DadosGravar = {
+  produtoId: number
+  consumoMedioDiario: number
+  pontoReposicao: number
+  quantidadeSugerida: number
+  metodo: string
+  dataGeracao: Date
+}
+
+async function gravarPendente(tx: Prisma.TransactionClient, dados: DadosGravar) {
+  const linhas = await tx.$queryRaw<Array<{ criada: boolean }>>`
     INSERT INTO "sugestoes_reposicao" (
       "produto_id",
       "consumo_medio_diario",
@@ -37,13 +48,13 @@ async function gravarPendente(tx, dados) {
   return linhas[0]?.criada === true
 }
 
-export async function gerarSugestoes() {
+export async function gerarSugestoes(): Promise<ResumoGeracao> {
   const [produtos, linhas] = await Promise.all([
     prisma.produto.findMany({ where: { ativo: true }, select: { id: true, quantidadeAtual: true } }),
     listarConsumoDiarioHistorico(),
   ])
 
-  const porProduto = new Map()
+  const porProduto = new Map<number, ConsumoDia[]>()
   for (const linha of linhas) {
     const serie = porProduto.get(linha.produtoId) ?? []
     serie.push({ dia: linha.dia, quantidade: linha.quantidadeSaida })
@@ -58,8 +69,8 @@ export async function gerarSugestoes() {
     puladasSemConsumo: 0,
     puladasSemNecessidade: 0,
   }
-  const gravar = []
-  const remover = []
+  const gravar: DadosGravar[] = []
+  const remover: number[] = []
 
   for (const produto of produtos) {
     resumo.analisados += 1

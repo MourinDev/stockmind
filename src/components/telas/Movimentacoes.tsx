@@ -3,7 +3,9 @@
 /*
   TELA 3: Registro de movimentações (entradas e saídas).
 */
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
+import type { MovimentacaoTela, ProdutoTela, TipoMovimentacaoTela } from '../../types/dominio'
+import type { ValorEstoque } from '../../types/estoque'
 import { ArrowDown, ArrowRight, ArrowUp, History, Search } from 'lucide-react'
 import { COR_ENTRADA, COR_SAIDA, dataISO } from '../../lib/dados'
 import { estaCritico, formatarData } from '../../lib/regras'
@@ -14,8 +16,10 @@ const MOTIVOS = {
   SAIDA: ['Venda', 'Perda', 'Vencimento', 'Ajuste de inventário'],
 }
 
-export default function TelaMovimentacoes({ produtos, movimentacoes, registrarMovimentacao }) {
-  const formularioVazio = { produtoId: '', tipo: 'ENTRADA', quantidade: '', dataOcorrencia: dataISO(new Date()), observacao: '' }
+type FormularioMovimento = { produtoId: string; tipo: TipoMovimentacaoTela; quantidade: string; dataOcorrencia: string; observacao: string }
+
+export default function TelaMovimentacoes({ produtos, movimentacoes, registrarMovimentacao }: { produtos: ProdutoTela[]; movimentacoes: MovimentacaoTela[]; registrarMovimentacao: ValorEstoque['registrarMovimentacao'] }) {
+  const formularioVazio: FormularioMovimento = { produtoId: '', tipo: 'ENTRADA', quantidade: '', dataOcorrencia: dataISO(new Date()), observacao: '' }
   const [formulario, setFormulario] = useState(formularioVazio)
   const [erro, setErro] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
@@ -29,19 +33,19 @@ export default function TelaMovimentacoes({ produtos, movimentacoes, registrarMo
   const saldoPrevisto = produtoSelecionado ? produtoSelecionado.quantidade + (entrada ? quantidade : -quantidade) : null
   const saidaInvalida = saldoPrevisto !== null && saldoPrevisto < 0
 
-  const alterar = (campo, valor) => {
+  const alterar = (campo: keyof FormularioMovimento, valor: string) => {
     setFormulario((atual) => ({ ...atual, [campo]: valor }))
     setErro('')
   }
 
-  async function enviar(evento) {
+  async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const resultado = await registrarMovimentacao(formulario)
     if (resultado.ok) setFormulario({ ...formularioVazio, tipo: formulario.tipo })
     else setErro(resultado.erro)
   }
 
-  const produtoPorId = (id) => produtos.find((p) => p.id === id)
+  const produtoPorId = (id: number) => produtos.find((p) => p.id === id)
   const historico = movimentacoes
     .filter((m) => !filtroTipo || m.tipo === filtroTipo)
     .filter((m) => {

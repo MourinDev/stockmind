@@ -8,6 +8,7 @@ import { Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, Responsiv
 import { Download, History } from 'lucide-react'
 import { COR_CLASSE, COR_ENTRADA, COR_SAIDA, dataISO } from '../../lib/dados'
 import { baixarCSV, calcularCurvaABC, formatarData, formatarMoeda } from '../../lib/regras'
+import type { ClasseAbc, MovimentacaoTela, ProdutoTela } from '../../types/dominio'
 import { Abas, Botao, Cartao, EstadoVazio, SeloClasse, TituloTela, TooltipGrafico, animarGraficos, classeEntrada } from '../ui'
 
 const DESCRICAO_CLASSE = {
@@ -16,13 +17,13 @@ const DESCRICAO_CLASSE = {
   C: 'Muitos itens, pouco valor. Controle simplificado.',
 }
 
-export default function TelaRelatorios({ produtos, movimentacoes }) {
+export default function TelaRelatorios({ produtos, movimentacoes }: { produtos: ProdutoTela[]; movimentacoes: MovimentacaoTela[] }) {
   const [filtroTipo, setFiltroTipo] = useState('')
   const [filtroProduto, setFiltroProduto] = useState('')
   const curva = useMemo(() => calcularCurvaABC(produtos), [produtos])
   const valorGeral = curva.reduce((s, p) => s + p.valorTotal, 0)
 
-  const resumoClasses = ['A', 'B', 'C'].map((classe) => {
+  const resumoClasses = (['A', 'B', 'C'] as ClasseAbc[]).map((classe) => {
     const itens = curva.filter((p) => p.classe === classe)
     const valor = itens.reduce((s, p) => s + p.valorTotal, 0)
     return { classe, itens: itens.length, valor, percentual: valorGeral ? (valor / valorGeral) * 100 : 0 }
@@ -37,14 +38,14 @@ export default function TelaRelatorios({ produtos, movimentacoes }) {
     '% acumulado': Number(p.percentualAcumulado.toFixed(1)),
   }))
 
-  const produtoPorId = (id) => produtos.find((p) => p.id === id)
+  const produtoPorId = (id: number) => produtos.find((p) => p.id === id)
   const historico = movimentacoes
     .filter((m) => !filtroTipo || m.tipo === filtroTipo)
     .filter((m) => !filtroProduto || m.produtoId === Number(filtroProduto))
     .sort((a, b) => b.dataOcorrencia.localeCompare(a.dataOcorrencia) || b.id - a.id)
 
   function exportarHistorico() {
-    const linhas = [['Data', 'Código', 'Produto', 'Tipo', 'Quantidade', 'Observação', 'Responsável']]
+    const linhas: unknown[][] = [['Data', 'Código', 'Produto', 'Tipo', 'Quantidade', 'Observação', 'Responsável']]
     historico.forEach((m) => {
       const produto = produtoPorId(m.produtoId)
       linhas.push([formatarData(m.dataOcorrencia), produto?.codigo ?? '', produto?.descricao ?? '', m.tipo, m.quantidade, m.observacao, m.usuarioResponsavel])
@@ -53,8 +54,8 @@ export default function TelaRelatorios({ produtos, movimentacoes }) {
   }
 
   function exportarCurva() {
-    const decimal = (n) => n.toFixed(2).replace('.', ',')
-    const linhas = [['Posição', 'Código', 'Produto', 'Quantidade', 'Valor unitário', 'Valor total', '% do total', '% acumulado', 'Classe']]
+    const decimal = (n: number) => n.toFixed(2).replace('.', ',')
+    const linhas: unknown[][] = [['Posição', 'Código', 'Produto', 'Quantidade', 'Valor unitário', 'Valor total', '% do total', '% acumulado', 'Classe']]
     curva.forEach((p, i) => {
       linhas.push([i + 1, p.codigo, p.descricao, p.quantidade, decimal(p.valorUnitario), decimal(p.valorTotal), decimal(p.percentual), decimal(p.percentualAcumulado), p.classe])
     })
@@ -92,7 +93,7 @@ export default function TelaRelatorios({ produtos, movimentacoes }) {
         subtitulo="Participação de cada item (barras) e percentual acumulado (linha)"
         acao={
           <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-600">
-            {['A', 'B', 'C'].map((c) => (
+            {(['A', 'B', 'C'] as ClasseAbc[]).map((c) => (
               <span key={c} className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-sm" style={{ background: COR_CLASSE[c] }} /> Classe {c}
               </span>
@@ -108,7 +109,7 @@ export default function TelaRelatorios({ produtos, movimentacoes }) {
               <XAxis dataKey="codigo" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} interval={0} angle={-35} textAnchor="end" height={50} />
               <YAxis domain={[0, 100]} ticks={[0, 20, 40, 60, 80, 95, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
               <Tooltip
-                content={<TooltipGrafico formatarRotulo={(_, payload) => `${payload[0]?.payload.descricao} · Classe ${payload[0]?.payload.classe}`} formatarValor={(v) => `${v}%`} />}
+                content={<TooltipGrafico formatarRotulo={(_, itens) => `${itens[0]?.payload?.descricao} · Classe ${itens[0]?.payload?.classe}`} formatarValor={(v) => `${v}%`} />}
                 cursor={{ fill: '#f1f5f9' }}
               />
               <ReferenceLine y={80} stroke="#94a3b8" strokeDasharray="4 4" />

@@ -5,15 +5,17 @@
   O leitor é simulado: tocar numa etiqueta ou digitar o código faz o mesmo
   papel que a câmera/leitor óptico faria ao decodificar o QR Code.
 */
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
+import type { ProdutoTela, TipoMovimentacaoTela } from '../../types/dominio'
+import type { ValorEstoque } from '../../types/estoque'
 import { ArrowDown, ArrowUp, Printer, QrCode, ScanLine } from 'lucide-react'
 import { COR_ENTRADA, COR_SAIDA, dataISO } from '../../lib/dados'
 import { estaCritico, formatarMoeda, tocarBip } from '../../lib/regras'
 import { Abas, BarraNivel, Botao, Cartao, EstadoVazio, IconeCategoria, MensagemErro, SeloStatus, TituloTela, classeEntrada } from '../ui'
 import { Etiqueta, QRCodeProduto } from '../QRCode'
 
-function CantoMira({ posicao }) {
-  const estilos = {
+function CantoMira({ posicao }: { posicao: 'sup-esq' | 'sup-dir' | 'inf-esq' | 'inf-dir' }) {
+  const estilos: Record<typeof posicao, string> = {
     'sup-esq': 'left-5 top-5 border-l-4 border-t-4 rounded-tl-2xl',
     'sup-dir': 'right-5 top-5 border-r-4 border-t-4 rounded-tr-2xl',
     'inf-esq': 'bottom-5 left-5 border-b-4 border-l-4 rounded-bl-2xl',
@@ -22,20 +24,20 @@ function CantoMira({ posicao }) {
   return <span className={`absolute h-10 w-10 border-teal-400 ${estilos[posicao]}`} />
 }
 
-export default function TelaQRCode({ produtos, registrarMovimentacao, buscarProdutoPorCodigo }) {
+export default function TelaQRCode({ produtos, registrarMovimentacao, buscarProdutoPorCodigo }: { produtos: ProdutoTela[]; registrarMovimentacao: ValorEstoque['registrarMovimentacao']; buscarProdutoPorCodigo: ValorEstoque['buscarProdutoPorCodigo'] }) {
   const [aba, setAba] = useState('leitor')
   const [codigoDigitado, setCodigoDigitado] = useState('')
-  const [produtoLidoId, setProdutoLidoId] = useState(null)
+  const [produtoLidoId, setProdutoLidoId] = useState<number | null>(null)
   const [lendo, setLendo] = useState(false)
   const [contadorLeituras, setContadorLeituras] = useState(0)
   const [quantidadeLivre, setQuantidadeLivre] = useState('')
   const [erro, setErro] = useState('')
-  const [ultimasOperacoes, setUltimasOperacoes] = useState([])
+  const [ultimasOperacoes, setUltimasOperacoes] = useState<{ chave: number; produto: string; tipo: TipoMovimentacaoTela; quantidade: number }[]>([])
 
   // Busca pelo id para a ficha refletir o saldo atualizado após cada clique
   const produtoLido = produtos.find((p) => p.id === produtoLidoId)
 
-  async function lerCodigo(codigo) {
+  async function lerCodigo(codigo: string) {
     setErro('')
     setLendo(true)
     try {
@@ -57,7 +59,8 @@ export default function TelaQRCode({ produtos, registrarMovimentacao, buscarProd
     }
   }
 
-  async function movimentar(tipo, quantidade) {
+  async function movimentar(tipo: TipoMovimentacaoTela, quantidade: number | string) {
+    if (!produtoLido) return
     const resultado = await registrarMovimentacao({
       produtoId: produtoLido.id,
       tipo,
@@ -180,7 +183,7 @@ export default function TelaQRCode({ produtos, registrarMovimentacao, buscarProd
                     <BarraNivel quantidade={produtoLido.quantidade} minimo={produtoLido.estoqueMinimo} />
                   </div>
 
-                  {['ENTRADA', 'SAIDA'].map((tipo) => {
+                  {(['ENTRADA', 'SAIDA'] as const).map((tipo) => {
                     const ehEntrada = tipo === 'ENTRADA'
                     const cor = ehEntrada ? COR_ENTRADA : COR_SAIDA
                     return (

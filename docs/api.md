@@ -1,6 +1,6 @@
 # API do StockMind
 
-Route Handlers do Next.js 16. Todas rodam no runtime Node.js. O cliente Prisma é o singleton de `src/lib/prisma.js`.
+Route Handlers do Next.js 16, em `route.ts`. Todas rodam no runtime Node.js. O cliente Prisma é o singleton de `src/lib/prisma.ts`. A checagem de tipos é `npm run typecheck`.
 
 Erro padrão: `{ "erro": "mensagem" }`. Validação com zod acrescenta `campos`, um objeto com a mensagem de cada campo inválido, e responde `400`.
 
@@ -18,7 +18,7 @@ O cookie é um JWT HS256 (`jose`), com expiração de 8 horas. O payload tem só
 
 `POST /api/auth/logout` apaga o cookie. Não exige sessão, para o navegador conseguir limpar um token vencido.
 
-`src/proxy.js` (o interceptador de requisições do Next.js 16; não é `middleware.js`) só olha o JWT, sem consultar o banco:
+`src/proxy.ts` (o interceptador de requisições do Next.js 16; não é `middleware.js`) só olha o JWT, sem consultar o banco:
 
 - página sem sessão, fora de `/login`, redireciona para `/login`;
 - `/login` com sessão válida redireciona para `/`;
@@ -42,7 +42,7 @@ Recarregar a página mantém o cookie. A casca espera o `GET /api/auth/me` antes
 | DELETE | /api/produtos/{id} | admin | Soft delete: `ativo = false`. A linha não é apagada | 200, 400, 401, 403, 404, 500 |
 | GET | /api/movimentacoes | sessão | Histórico paginado. Query: `produtoId`, `tipo` (`entrada` ou `saida`), `de`, `ate` (`AAAA-MM-DD`, fuso America/Sao_Paulo), `pagina`, `porPagina` (máximo 100). Corpo: `{ itens, total, pagina, porPagina }` | 200, 400, 401, 500 |
 | POST | /api/movimentacoes | admin e operador | Insere a movimentação. Corpo: `produtoId`, `tipo`, `quantidade`, `observacao` opcional. O preço unitário é o custo na entrada e a venda na saída, lidos no servidor. O trigger atualiza o saldo. A resposta traz a movimentação e o produto já com o saldo novo | 201, 400, 401, 403, 404, 422, 500 |
-| GET | /api/dashboard | sessão | Estoque baixo, valor do estoque, movimentação por período, mais movimentados e consumo médio. Dados de `src/lib/queries.js` | 200, 401, 500 |
+| GET | /api/dashboard | sessão | Estoque baixo, valor do estoque, movimentação por período, mais movimentados e consumo médio. Dados de `src/lib/queries.ts` | 200, 401, 500 |
 | GET | /api/relatorios | sessão | As mesmas views, mais o agrupamento por produto e por categoria. `de` e `ate` filtram só a série por período | 200, 400, 401, 500 |
 | POST | /api/ia/gerar | admin | Recalcula as sugestões de reposição e grava em `sugestoes_reposicao`. Devolve o resumo: analisados, criadas, atualizadas, removidas, puladasSemConsumo, puladasSemNecessidade | 200, 401, 403, 500 |
 | GET | /api/ia/sugestoes | admin e operador | Lista as sugestões com o produto. Query opcional `status` (`pendente`, `aceita`, `ignorada`). Pendentes primeiro; dentro do grupo, menor cobertura em dias primeiro | 200, 400, 401, 403, 500 |

@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { exigirSessao } from '../../../../../lib/auth'
 import { erroInterno, errosZod, json, jsonErro, lerJson } from '../../../../../lib/http'
 import { incluirProduto, sugestaoApi } from '../../../../../lib/ia/apresentar'
@@ -6,7 +7,7 @@ import { decisaoSugestaoSchema } from '../../../../../lib/validacao'
 
 export const runtime = 'nodejs'
 
-export async function PATCH(request, { params }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const acesso = await exigirSessao(['admin'])
     if (acesso.resposta) return acesso.resposta

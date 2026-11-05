@@ -19,18 +19,23 @@ export const COR_ENTRADA = '#1D4ED8'
 export const COR_SAIDA = '#0D9488'
 export const COR_CLASSE = { A: '#1D4ED8', B: '#0D9488', C: '#D97706' }
 
+export function corDaCategoria(categoria: string) {
+  if (categoria in COR_CATEGORIA) return COR_CATEGORIA[categoria as keyof typeof COR_CATEGORIA]
+  return '#64748b'
+}
+
 // Parâmetros do módulo de IA (explicados na tela da StockMind IA)
 export const JANELA_ANALISE_DIAS = 15 // período de histórico usado para medir o giro
 export const PRAZO_ENTREGA_DIAS = 3 // tempo médio que o fornecedor leva para entregar
 
-export function dataISO(data) {
+export function dataISO(data: Date) {
   const ano = data.getFullYear()
   const mes = String(data.getMonth() + 1).padStart(2, '0')
   const dia = String(data.getDate()).padStart(2, '0')
   return `${ano}-${mes}-${dia}`
 }
 
-export function diasAtras(quantidade) {
+export function diasAtras(quantidade: number) {
   const data = new Date()
   data.setDate(data.getDate() - quantidade)
   return dataISO(data)

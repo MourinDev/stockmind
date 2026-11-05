@@ -3,9 +3,10 @@
 import { useMemo } from 'react'
 import qrcode from 'qrcode-generator'
 import { formatarMoeda } from '../lib/regras'
+import type { ProdutoTela } from '../types/dominio'
 
 // Gera o QR Code em SVG a partir do código do produto (é o que o leitor lê)
-export function QRCodeProduto({ valor, tamanho = 120 }) {
+export function QRCodeProduto({ valor, tamanho = 120 }: { valor: string; tamanho?: number }) {
   const caminho = useMemo(() => {
     const qr = qrcode(0, 'M')
     qr.addData(valor)
@@ -28,7 +29,7 @@ export function QRCodeProduto({ valor, tamanho = 120 }) {
   )
 }
 
-export function Etiqueta({ produto }) {
+export function Etiqueta({ produto }: { produto: Pick<ProdutoTela, 'categoria' | 'codigo' | 'descricao' | 'valorUnitario'> }) {
   return (
     <div className="etiqueta flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-3 text-center shadow-sm">
       <div className="mb-2 flex w-full items-center justify-between text-[9px] font-bold uppercase tracking-wider text-slate-400">

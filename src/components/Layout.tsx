@@ -6,11 +6,14 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { AlertTriangle, ArrowLeftRight, Bell, FileBarChart, LayoutDashboard, LogOut, Menu, Package, QrCode, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Bell, FileBarChart, LayoutDashboard, LogOut, Menu, Package, QrCode, Sparkles, X, type LucideIcon } from 'lucide-react'
 import { idDaRota, ROTAS } from '../lib/rotas'
+import type { ProdutoTela, UsuarioTela } from '../types/dominio'
 import { LogoStockMind, IconeCategoria } from './ui'
 
-export const GRUPOS_MENU = [
+type ItemMenu = { id: keyof typeof ROTAS; rotulo: string; icone: LucideIcon; destaque?: boolean }
+
+export const GRUPOS_MENU: { titulo: string; itens: ItemMenu[] }[] = [
   {
     titulo: 'Visão geral',
     itens: [{ id: 'dashboard', rotulo: 'Dashboard', icone: LayoutDashboard }],
@@ -34,7 +37,7 @@ export const GRUPOS_MENU = [
 
 export const TITULO_TELA = Object.fromEntries(GRUPOS_MENU.flatMap((g) => g.itens).map((i) => [i.id, i.rotulo]))
 
-export function BarraLateral({ totalAlertas, usuario, aberto, onFechar, onSair }) {
+export function BarraLateral({ totalAlertas, usuario, aberto, onFechar, onSair }: { totalAlertas: number; usuario: UsuarioTela; aberto: boolean; onFechar: () => void; onSair: () => void }) {
   const pathname = usePathname()
 
   return (
@@ -107,7 +110,7 @@ export function BarraLateral({ totalAlertas, usuario, aberto, onFechar, onSair }
   )
 }
 
-export function Avatar({ nome, tamanho = 'h-9 w-9 text-sm' }) {
+export function Avatar({ nome, tamanho = 'h-9 w-9 text-sm' }: { nome: string; tamanho?: string }) {
   const iniciais = nome
     .split(' ')
     .map((parte) => parte[0])
@@ -120,16 +123,16 @@ export function Avatar({ nome, tamanho = 'h-9 w-9 text-sm' }) {
   )
 }
 
-export function Cabecalho({ usuario, produtosCriticos, onAbrirMenu, onSair }) {
+export function Cabecalho({ usuario, produtosCriticos, onAbrirMenu, onSair }: { usuario: UsuarioTela; produtosCriticos: ProdutoTela[]; onAbrirMenu: () => void; onSair: () => void }) {
   const pathname = usePathname()
   const telaAtual = idDaRota(pathname)
   const [notificacoesAbertas, setNotificacoesAbertas] = useState(false)
-  const caixaRef = useRef(null)
+  const caixaRef = useRef<HTMLDivElement>(null)
 
   // Fecha a caixa de notificações ao clicar fora dela
   useEffect(() => {
-    function aoClicar(evento) {
-      if (caixaRef.current && !caixaRef.current.contains(evento.target)) setNotificacoesAbertas(false)
+    function aoClicar(evento: MouseEvent) {
+      if (caixaRef.current && evento.target instanceof Node && !caixaRef.current.contains(evento.target)) setNotificacoesAbertas(false)
     }
     document.addEventListener('mousedown', aoClicar)
     return () => document.removeEventListener('mousedown', aoClicar)

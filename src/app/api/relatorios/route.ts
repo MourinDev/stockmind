@@ -1,3 +1,4 @@
+import type { NextRequest } from 'next/server'
 import { exigirSessao } from '../../../lib/auth'
 import { erroInterno, errosZod, json } from '../../../lib/http'
 import {
@@ -12,7 +13,7 @@ import { filtroRelatorioSchema } from '../../../lib/validacao'
 
 export const runtime = 'nodejs'
 
-export async function GET(request) {
+export async function GET(request: NextRequest) {
   try {
     const acesso = await exigirSessao()
     if (acesso.resposta) return acesso.resposta

@@ -1,22 +1,26 @@
 import { NextResponse } from 'next/server'
+import type { ZodError } from 'zod'
+import type { MovimentacaoApi, ProdutoApi } from '../types/dominio'
 
-export function json(dados, status = 200) {
+export function json(dados: unknown, status = 200) {
   return NextResponse.json(dados, { status })
 }
 
-export function jsonErro(status, erro, extra) {
+export function jsonErro(status: number, erro: string, extra?: Record<string, unknown>) {
   return NextResponse.json(extra ? { erro, ...extra } : { erro }, { status })
 }
 
-export function numero(valor) {
+export function numero(valor: unknown) {
   if (valor == null) return 0
   if (typeof valor === 'number') return valor
   if (typeof valor === 'bigint') return Number(valor)
-  if (typeof valor.toNumber === 'function') return valor.toNumber()
+  if (typeof valor === 'object' && 'toNumber' in valor && typeof valor.toNumber === 'function') {
+    return Number(valor.toNumber())
+  }
   return Number(valor)
 }
 
-export async function lerJson(request) {
+export async function lerJson(request: Request) {
   try {
     return await request.json()
   } catch {
@@ -24,8 +28,8 @@ export async function lerJson(request) {
   }
 }
 
-export function errosZod(resultado) {
-  const campos = {}
+export function errosZod(resultado: { error: ZodError }) {
+  const campos: Record<string, string> = {}
   for (const issue of resultado.error.issues) {
     const campo = issue.path.join('.') || 'corpo'
     if (!campos[campo]) campos[campo] = issue.message
@@ -33,31 +37,45 @@ export function errosZod(resultado) {
   return jsonErro(400, 'Dados inválidos.', { campos })
 }
 
-export function erroInterno(erro, contexto) {
+export function erroInterno(erro: unknown, contexto: string) {
   console.error(`[${contexto}]`, erro)
   return jsonErro(500, 'Não foi possível concluir a operação.')
 }
 
-function textoDoErro(erro, vistos = new Set()) {
-  if (!erro || vistos.has(erro)) return ''
-  vistos.add(erro)
+type ErroEncadeado = {
+  message?: unknown
+  meta?: unknown
+  code?: unknown
+  cause?: unknown
+}
+
+function comoErro(valor: unknown): ErroEncadeado | null {
+  if (!valor || typeof valor !== 'object') return null
+  return valor
+}
+
+function textoDoErro(erro: unknown, vistos = new Set<object>()): string {
+  const atual = comoErro(erro)
+  if (!atual || vistos.has(atual)) return ''
+  vistos.add(atual)
   const partes = []
-  if (typeof erro.message === 'string') partes.push(erro.message)
-  if (erro.meta) partes.push(JSON.stringify(erro.meta))
-  if (erro.cause) partes.push(textoDoErro(erro.cause, vistos))
+  if (typeof atual.message === 'string') partes.push(atual.message)
+  if (atual.meta) partes.push(JSON.stringify(atual.meta))
+  if (atual.cause) partes.push(textoDoErro(atual.cause, vistos))
   return partes.join(' ')
 }
 
-function codigoPrisma(erro, vistos = new Set()) {
-  if (!erro || vistos.has(erro)) return null
-  vistos.add(erro)
-  if (typeof erro.code === 'string') return erro.code
-  return codigoPrisma(erro.cause, vistos)
+function codigoPrisma(erro: unknown, vistos = new Set<object>()): string | null {
+  const atual = comoErro(erro)
+  if (!atual || vistos.has(atual)) return null
+  vistos.add(atual)
+  if (typeof atual.code === 'string') return atual.code
+  return codigoPrisma(atual.cause, vistos)
 }
 
 const SALDO = /Saldo insuficiente:.*?tem só (\d+) unidade\(s\) e a saída pedida é de (\d+)/
 
-export function mensagemSaldoInsuficiente(erro) {
+export function mensagemSaldoInsuficiente(erro: unknown) {
   const texto = textoDoErro(erro)
   if (!texto.includes('Saldo insuficiente')) return null
   const encontrado = texto.match(SALDO)
@@ -65,7 +83,7 @@ export function mensagemSaldoInsuficiente(erro) {
   return `Saldo insuficiente: disponível ${encontrado[1]}, solicitado ${encontrado[2]}`
 }
 
-export function mensagemDuplicidade(erro) {
+export function mensagemDuplicidade(erro: unknown) {
   if (codigoPrisma(erro) !== 'P2002') return null
   const texto = textoDoErro(erro)
   if (texto.includes('qr_code') || texto.includes('qrCode')) return 'QR Code já cadastrado.'
@@ -73,7 +91,7 @@ export function mensagemDuplicidade(erro) {
   return 'Já existe um registro com esses dados.'
 }
 
-export function tratarErroBanco(erro, contexto) {
+export function tratarErroBanco(erro: unknown, contexto: string) {
   const saldo = mensagemSaldoInsuficiente(erro)
   if (saldo) return jsonErro(422, saldo)
   const duplicado = mensagemDuplicidade(erro)
@@ -81,7 +99,21 @@ export function tratarErroBanco(erro, contexto) {
   return erroInterno(erro, contexto)
 }
 
-export function produtoApi(produto) {
+type ProdutoComCategoria = {
+  id: number
+  codigo: string
+  descricao: string
+  categoria?: { nome: string } | null
+  categoriaId: number
+  quantidadeAtual: number
+  estoqueMinimo: number
+  valorCusto: unknown
+  valorVenda: unknown
+  qrCode: string
+  ativo: boolean
+}
+
+export function produtoApi(produto: ProdutoComCategoria): ProdutoApi {
   return {
     id: produto.id,
     codigo: produto.codigo,
@@ -97,7 +129,20 @@ export function produtoApi(produto) {
   }
 }
 
-export function movimentacaoApi(movimentacao) {
+type MovimentacaoComRelacoes = {
+  id: number
+  produtoId: number
+  usuarioId: number
+  tipo: 'entrada' | 'saida'
+  quantidade: number
+  valorUnitario: unknown
+  observacao: string | null
+  dataHora: Date | string
+  usuario?: { id: number; nome: string } | null
+  produto?: { id: number; codigo: string; descricao: string } | null
+}
+
+export function movimentacaoApi(movimentacao: MovimentacaoComRelacoes): MovimentacaoApi {
   return {
     id: movimentacao.id,
     produtoId: movimentacao.produtoId,

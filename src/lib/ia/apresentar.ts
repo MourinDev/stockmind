@@ -1,8 +1,27 @@
+import type { StatusSugestao, SugestaoApi } from '../../types/dominio'
 import { numero } from '../http'
 
-const ORDEM_STATUS = { pendente: 0, aceita: 1, ignorada: 2 }
+const ORDEM_STATUS: Record<StatusSugestao, number> = { pendente: 0, aceita: 1, ignorada: 2 }
 
-export function sugestaoApi(sugestao) {
+type SugestaoBruta = {
+  id: number
+  status: StatusSugestao
+  metodo: string
+  consumoMedioDiario: unknown
+  pontoReposicaoSugerido: number
+  quantidadeSugerida: number
+  dataGeracao: Date | string
+  produto: {
+    id: number
+    codigo: string
+    descricao: string
+    quantidadeAtual: number
+    estoqueMinimo: number
+    categoria: { nome: string }
+  }
+}
+
+export function sugestaoApi(sugestao: SugestaoBruta): SugestaoApi {
   const consumo = numero(sugestao.consumoMedioDiario)
   const saldo = sugestao.produto.quantidadeAtual
   const cobertura = consumo > 0 ? Number((saldo / consumo).toFixed(4)) : null
@@ -27,7 +46,7 @@ export function sugestaoApi(sugestao) {
   }
 }
 
-export function ordenarSugestoes(sugestoes) {
+export function ordenarSugestoes(sugestoes: SugestaoApi[]) {
   return [...sugestoes].sort((a, b) => {
     const status = ORDEM_STATUS[a.status] - ORDEM_STATUS[b.status]
     if (status !== 0) return status
