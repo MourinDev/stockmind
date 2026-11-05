@@ -75,7 +75,9 @@ Consultas prontas em `src/lib/queries.js`, uma função por view, via `prisma.$q
 - `vw_movimentacoes_por_periodo`: totais por dia e por tipo, com a coluna `mes` para agregar o mês.
 - `vw_movimentacoes_por_produto` e `vw_movimentacoes_por_categoria`: quantidade e valor por tipo.
 - `vw_produtos_mais_movimentados`: ranking pela quantidade de saídas.
-- `vw_consumo_medio_diario`: média de saídas por dia nas janelas de 30, 60 e 90 dias, por produto, para a IA.
+- `vw_consumo_medio_diario`: média de saídas por dia nas janelas de 30, 60 e 90 dias, por produto.
+- `vw_consumo_diario_historico`: uma linha por produto ativo e por dia dos últimos 90 dias, no fuso America/Sao_Paulo. Dia sem saída vale zero. É a série usada pelo desvio e pela sazonalidade.
+- Índice único parcial `sugestoes_reposicao_pendente_produto_idx`: no máximo uma sugestão `pendente` por produto. Aceitas e ignoradas podem se repetir no histórico.
 
 ## Diagrama
 

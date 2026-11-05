@@ -52,3 +52,11 @@ export const filtroRelatorioSchema = z.object({
   de: dia.optional(),
   ate: dia.optional(),
 })
+
+export const filtroSugestoesSchema = z.object({
+  status: z.preprocess((valor) => (valor === undefined || valor === '' ? undefined : valor), z.enum(['pendente', 'aceita', 'ignorada']).optional()),
+})
+
+export const decisaoSugestaoSchema = z.object({
+  status: z.enum(['aceita', 'ignorada']),
+}).strict()

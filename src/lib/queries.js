@@ -145,3 +145,18 @@ export async function listarConsumoMedioDiario() {
     consumoMedio90: numero(linha.consumo_medio_90),
   }))
 }
+
+export async function listarConsumoDiarioHistorico() {
+  const linhas = await prisma.$queryRaw`
+    SELECT produto_id, codigo, dia, quantidade_saida
+    FROM vw_consumo_diario_historico
+    ORDER BY produto_id, dia
+  `
+
+  return linhas.map((linha) => ({
+    produtoId: linha.produto_id,
+    codigo: linha.codigo,
+    dia: dataISO(linha.dia),
+    quantidadeSaida: numero(linha.quantidade_saida),
+  }))
+}

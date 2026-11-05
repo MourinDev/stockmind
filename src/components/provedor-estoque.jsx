@@ -78,6 +78,27 @@ async function api(caminho, opcoes = {}) {
   return { resposta, corpo }
 }
 
+async function listarSugestoes() {
+  const { resposta, corpo } = await api('/api/ia/sugestoes')
+  if (!resposta.ok) return { ok: false, erro: corpo.erro || 'Não foi possível carregar as sugestões.' }
+  return { ok: true, sugestoes: corpo }
+}
+
+async function gerarSugestoes() {
+  const { resposta, corpo } = await api('/api/ia/gerar', { method: 'POST' })
+  if (!resposta.ok) return { ok: false, erro: corpo.erro || 'Não foi possível gerar as sugestões.' }
+  return { ok: true, resumo: corpo }
+}
+
+async function decidirSugestao(id, status) {
+  const { resposta, corpo } = await api(`/api/ia/sugestoes/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+  if (!resposta.ok) return { ok: false, erro: corpo.erro || 'Não foi possível atualizar a sugestão.' }
+  return { ok: true, sugestao: corpo }
+}
+
 async function listarMovimentacoes() {
   const itens = []
   let pagina = 1
@@ -319,6 +340,9 @@ export function ProvedorEstoque({ children }) {
         registrarMovimentacao,
         registrarMovimentacoes,
         buscarProdutoPorCodigo,
+        listarSugestoes,
+        gerarSugestoes,
+        decidirSugestao,
         mostrarAviso,
         irPara,
       }}

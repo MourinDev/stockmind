@@ -44,6 +44,9 @@ Recarregar a página mantém o cookie. A casca espera o `GET /api/auth/me` antes
 | POST | /api/movimentacoes | admin e operador | Insere a movimentação. Corpo: `produtoId`, `tipo`, `quantidade`, `observacao` opcional. O preço unitário é o custo na entrada e a venda na saída, lidos no servidor. O trigger atualiza o saldo. A resposta traz a movimentação e o produto já com o saldo novo | 201, 400, 401, 403, 404, 422, 500 |
 | GET | /api/dashboard | sessão | Estoque baixo, valor do estoque, movimentação por período, mais movimentados e consumo médio. Dados de `src/lib/queries.js` | 200, 401, 500 |
 | GET | /api/relatorios | sessão | As mesmas views, mais o agrupamento por produto e por categoria. `de` e `ate` filtram só a série por período | 200, 400, 401, 500 |
+| POST | /api/ia/gerar | admin | Recalcula as sugestões de reposição e grava em `sugestoes_reposicao`. Devolve o resumo: analisados, criadas, atualizadas, removidas, puladasSemConsumo, puladasSemNecessidade | 200, 401, 403, 500 |
+| GET | /api/ia/sugestoes | admin e operador | Lista as sugestões com o produto. Query opcional `status` (`pendente`, `aceita`, `ignorada`). Pendentes primeiro; dentro do grupo, menor cobertura em dias primeiro | 200, 400, 401, 403, 500 |
+| PATCH | /api/ia/sugestoes/{id} | admin | Corpo `{ status: "aceita" ou "ignorada" }`. Só a partir de `pendente`; outro estado responde 409. Não cria movimentação | 200, 400, 401, 403, 404, 409, 500 |
 
 Não há `PATCH` nem `DELETE` de movimentação. O banco bloqueia os dois.
 
@@ -69,9 +72,9 @@ O formulário de produto tem um único preço. No cadastro, custo e venda recebe
 
 A quantidade do formulário não vai no `POST` nem no `PATCH`. Se a quantidade inicial for maior que zero, o provider grava uma entrada. Se a quantidade editada mudar, a diferença vira entrada ou saída com a observação "Ajuste de inventário".
 
-A ordem da IA chama `POST /api/movimentacoes` uma vez por item. Se um item falhar, os anteriores permanecem gravados e a tela recarrega as listas. Não há uma transação única para a ordem inteira.
+Aceitar uma sugestão de reposição não cria movimentação. A entrada do produto continua em `POST /api/movimentacoes`. O método da sugestão está em `docs/ia.md`.
 
-Dashboard, relatórios e a sugestão de reposição continuam calculados no navegador com `src/lib/regras.js`, em cima das listas carregadas pela API. Os endpoints de dashboard e relatórios existem para consulta e para o TCC.
+O dashboard ainda classifica urgência no navegador com a média simples de 15 dias (`calcularSugestaoIA`). Relatórios usam a Curva ABC no cliente. Os endpoints de dashboard e relatórios existem para consulta e para o TCC.
 
 ## Limitação conhecida
 
