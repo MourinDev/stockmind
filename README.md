@@ -99,27 +99,9 @@ Como tudo parte do mesmo estado, um registro feito pelo leitor de QR Code ou pel
 
 ### Fórmula da StockMind IA
 
-Parâmetros: janela de análise de 15 dias, prazo de entrega de 3 dias e cobertura de 15 ou 30 dias (escolhida na tela).
+A sugestão gravada no banco está descrita em [docs/ia.md](docs/ia.md): média ponderada de 30, 60 e 90 dias, estoque de segurança e fator por dia da semana. Aceitar a sugestão não dá entrada no estoque.
 
-```
-giro diário        = soma das SAÍDAS do produto nos últimos 15 dias / 15
-autonomia (dias)   = quantidade atual / giro diário
-ponto de reposição = giro diário x 3 (prazo de entrega) + estoque mínimo
-sugestão de compra = arredondar para cima(giro diário x cobertura + estoque mínimo - quantidade atual), nunca menor que 0
-```
-
-Classificação de urgência:
-
-- **Reposição Imediata**: quantidade <= estoque mínimo, ou autonomia <= 3 dias (acaba antes da entrega chegar).
-- **Planejar Compra**: quantidade <= ponto de reposição, ou autonomia <= 10 dias.
-- **Estoque Saudável**: nenhum dos casos acima.
-
-Exemplo com os dados iniciais, para o Leite Integral (42 saídas em 15 dias, saldo 6, mínimo 24, cobertura de 15 dias):
-giro = 42 / 15 = 2,8 por dia; autonomia = 6 / 2,8 = 2,1 dias; sugestão = 2,8 x 15 + 24 - 6 = 60 unidades. Resultado: **Reposição Imediata**.
-
-O botão **Gerar ordem de reposição** junta os itens urgentes, mostra o custo estimado e, ao confirmar o recebimento, registra uma ENTRADA para cada um.
-
-É um modelo estatístico simples (média móvel), escolhido por ser explicável. Numa próxima versão ele pode dar lugar a modelos de previsão mais robustos, como as redes neurais recorrentes citadas no referencial (Soares Junior, 2020), sem mudar a tela, porque a tela só consome o resultado de `calcularSugestaoIA`.
+O banner do dashboard ainda usa a média simples dos últimos 15 dias, em `calcularSugestaoIA`. Essa conta não é a sugestão persistida.
 
 ### Fórmula da Curva ABC
 
