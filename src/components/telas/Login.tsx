@@ -35,9 +35,9 @@ export default function TelaLogin({ onEntrar }: { onEntrar: (email: string, senh
       {/* Painel da marca (só no computador) */}
       <div className="relative hidden overflow-hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-32 -top-32 h-[28rem] w-[28rem] rounded-full bg-royal/60 blur-3xl" />
-          <div className="absolute -bottom-40 -right-20 h-[28rem] w-[28rem] rounded-full bg-teal-marca/40 blur-3xl" />
-          <div className="fundo-grade absolute inset-0 opacity-20" />
+          <img src="./login-estoque.jpg" alt="" className="h-full w-full object-cover" />
+          {/* escurece a foto para o texto branco continuar legível */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/60 to-slate-950/40" />
         </div>
 
         <div className="relative flex items-center gap-3">
@@ -66,14 +66,14 @@ export default function TelaLogin({ onEntrar }: { onEntrar: (email: string, senh
                 </div>
                 <div>
                   <p className="font-semibold">{titulo}</p>
-                  <p className="text-sm text-slate-400">{texto}</p>
+                  <p className="text-sm text-slate-300">{texto}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="relative text-xs text-slate-500">Projeto Integrado de Engenharia de Produto · Uniceplac 2026</p>
+        <p className="relative text-xs text-slate-300">Projeto Integrado de Engenharia de Produto · Uniceplac 2026</p>
       </div>
 
       {/* Formulário */}
